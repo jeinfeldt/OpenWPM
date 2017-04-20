@@ -66,6 +66,7 @@ class TaskManager:
         self.manager_params = manager_params
 
         # Create data directories if they do not exist
+        # TODO: directories should only be created if configured correspondingly
         if not os.path.exists(manager_params['screenshot_path']):
             os.makedirs(manager_params['screenshot_path'])
         if not os.path.exists(manager_params['source_dump_path']):
