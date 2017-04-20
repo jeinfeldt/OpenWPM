@@ -2,18 +2,28 @@
 # -*- coding: utf-8 -*-
 '''Starts crawls executing defined workload for measurement'''
 import sys, json, os
+from automation import TaskManager, CommandSequence
 
 # constants
 WEBSITE_FILE = 'measurement/quantcast-top-million.txt'
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to browser parameter .json-file\n2. path to manager parameter .json-file
 3. number of pages to crawl\nHint: For better results perform script as sudo'''
-NUM_BROWSERS = 1
 
 # public
 def crawl(sites, browser_params, manager_params):
     '''crawls given sites with given parameters'''
-    pass
+    manager = TaskManager.TaskManager(manager_params, [browser_params])
+    for site in sites:
+        command_sequence = CommandSequence.CommandSequence(site)
+        # Start by visiting the page
+        command_sequence.get(sleep=0, timeout=60)
+        # dump_profile_cookies/dump_flash_cookies closes the current tab.
+        command_sequence.dump_profile_cookies(120)
+        command_sequence.dump_flash_cookies(120)
+        manager.execute_command_sequence(command_sequence, index='**')
+    # Shuts down the browsers and waits for the data to finish logging
+    manager.close()
 
 def load_websites(file_path, amount):
     '''loads defined amount of pages from file, websites are returned
@@ -58,6 +68,7 @@ def _main():
     manager_params['database_name'] = db_name
     websites = load_websites(WEBSITE_FILE, int(amount))
     print 'Crawling...'
+    crawl(websites, browser_params, manager_params)
     print 'Finished crawling, data written to: %s' %(db_name)
 
 #main

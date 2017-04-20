@@ -9,7 +9,7 @@
 
     "random_attributes": false,
     "bot_mitigation": false,
-    "disable_flash": false,
+    "disable_flash": true,
     "profile_tar": null,
     "profile_archive_dir": null,
     "headless": true,
