@@ -81,6 +81,14 @@ def privacy(browser_params, fp, root_dir, browser_profile_path):
                 "`browser_params['adblock-plus_list_location']`. This can be "
                 "generated with `utilities.platform_utils.fetch_adblockplus_list()`."))
 
+    # Enable Disconnect
+    if browser_params['disconnect']:
+        fp.add_extension(extension=os.path.join(root_dir,'firefox_extensions/disconnect-3.15.3-fx.xpi'))
+
+    # Enable Privacy Badger
+    if browser_params['privacy-badger']:
+        fp.add_extension(extension=os.path.join(root_dir,'firefox_extensions/privacy_badger-2017.4.19.1-an+fx-linux.xpi'))
+
 def optimize_prefs(fp):
     """
     Disable various features and checks the browser will do on startup.

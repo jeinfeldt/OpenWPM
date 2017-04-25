@@ -12,7 +12,7 @@
     "disable_flash": false,
     "profile_tar": null,
     "profile_archive_dir": null,
-    "headless": true,
+    "headless": false,
     "browser": "firefox",
 
     "tp_cookies": "always",
@@ -20,6 +20,7 @@
     "ghostery": false,
     "https-everywhere": false,
     "adblock-plus": true,
+    "disconnect": false,
     "tracking-protection": false,
 
     "proxy": false,

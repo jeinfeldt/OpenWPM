@@ -20,6 +20,7 @@
     "ghostery": false,
     "https-everywhere": false,
     "adblock-plus": false,
+    "disconnect": false,
     "tracking-protection": false,
 
     "proxy": false,

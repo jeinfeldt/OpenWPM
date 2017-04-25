@@ -12,15 +12,16 @@
     "disable_flash": false,
     "profile_tar": null,
     "profile_archive_dir": null,
-    "headless": true,
+    "headless": false,
     "browser": "firefox",
 
     "tp_cookies": "always",
-    "donottrack": true,
+    "donottrack": false,
     "ghostery": false,
     "https-everywhere": false,
     "adblock-plus": false,
     "disconnect": false,
+    "privacy-badger": true,
     "tracking-protection": false,
 
     "proxy": false,

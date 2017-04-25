@@ -14,13 +14,14 @@ HELP = '''Scripts needs to be executed with the following parameters:
 def crawl(sites, browser_params, manager_params):
     '''crawls given sites with given parameters'''
     manager = TaskManager.TaskManager(manager_params, [browser_params])
+    sites = ["http://www.spiegel.de"]
     for site in sites:
         command_sequence = CommandSequence.CommandSequence(site)
         # Start by visiting the page
-        command_sequence.get(sleep=0, timeout=60)
+        command_sequence.get(sleep=0, timeout=120)
         # dump_profile_cookies/dump_flash_cookies closes the current tab.
         command_sequence.dump_profile_cookies(120)
-        command_sequence.dump_flash_cookies(120)
+        #command_sequence.dump_flash_cookies(120)
         manager.execute_command_sequence(command_sequence, index='**')
     # Shuts down the browsers and waits for the data to finish logging
     manager.close()
