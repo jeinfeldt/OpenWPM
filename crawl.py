@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 '''Starts crawls executing defined workload for measurement'''
 import sys, json, os
+from time import gmtime, strftime
 from automation import TaskManager, CommandSequence
 
 # constants
@@ -46,9 +47,10 @@ def load_parameters(file_path):
 
 def generate_db_name(browser_params_path, amount):
     '''adjusts parameters for manager suitable for measurement'''
-    db_name = '%s-%s-crawl-data.sqlite'
+    db_name = '%s-%s-%s-crawl-data.sqlite'
+    timestamp = strftime("%d%m%y-%H:%M", gmtime())
     prefix = os.path.basename(browser_params_path).split('_')[0]
-    return db_name %(prefix, str(amount))
+    return db_name %(prefix, str(amount), timestamp)
 
 def _init():
     '''guard clause and init for script'''
