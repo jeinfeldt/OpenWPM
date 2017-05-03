@@ -20,6 +20,21 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
+    def eval_flash_cookies(self):
+        pass
+
+    def rank_third_party_domains(self):
+        '''Rank most common tracking domains based on dataset (descending)'''
+        data = []
+        self.cursor.execute(self.COOKIE_QRY)
+        for site_url, base_domain in self.cursor.fetchall():
+            main_domain = site_url.strip("http://www.")
+        return data
+
+
+    def rank_third_party_cookie_keys(self):
+        pass
+
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
         data = {}
@@ -32,6 +47,11 @@ class DataEvaluator(object):
                 data[main_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
+
+    def _get_domain(self, url):
+        '''Transforms complete site url to domain e.g.
+        http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
+        return url.strip("http://www.")
 
     def close(self):
         '''closes connection to given db'''
