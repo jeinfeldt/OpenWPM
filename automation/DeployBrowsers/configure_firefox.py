@@ -1,8 +1,6 @@
 """ Set prefs and load extensions in Firefox """
 from ..Errors import BrowserConfigError
-import shutil
-import sys
-import os
+import time, shutil, sys, os
 
 def privacy(browser_params, fp, root_dir, browser_profile_path):
     """
@@ -86,9 +84,21 @@ def privacy(browser_params, fp, root_dir, browser_profile_path):
         fp.add_extension(extension=os.path.join(root_dir,'firefox_extensions/disconnect-3.15.3-fx.xpi'))
 
     # Enable Privacy Badger
+    # XXX: add on is web extension based, employed workaround suggested
+    # by github issue https://github.com/citp/OpenWPM/issues/117
+    '''
     if browser_params['privacy-badger']:
-        fp.add_extension(extension=os.path.join(root_dir,'firefox_extensions/privacy_badger-2017.4.19.1-an+fx-linux.xpi'))
-
+        extension_dir = os.path.join(browser_profile_path, 'extensions')
+        while 1:
+            try:
+                print "Trying " + extension_dir
+                os.makedirs(extension_dir)
+                path = os.path.join(root_dir,'firefox_extensions/privacy_badger-2017.4.19.1-an+fx-linux.xpi')
+                shutil.copyfile(path, extension_dir)
+                break
+            except OSError:
+                time.sleep(1)
+    '''
 def optimize_prefs(fp):
     """
     Disable various features and checks the browser will do on startup.

@@ -15,7 +15,6 @@ HELP = '''Scripts needs to be executed with the following parameters:
 def crawl(sites, browser_params, manager_params):
     '''crawls given sites with given parameters'''
     manager = TaskManager.TaskManager(manager_params, [browser_params])
-    sites = ["http://www.spiegel.de"]
     for site in sites:
         command_sequence = CommandSequence.CommandSequence(site)
         # Start by visiting the page
