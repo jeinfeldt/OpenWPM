@@ -11,13 +11,13 @@ from evaluation import DataEvaluator
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
 
-def _write_result(data, output_path):
-    '''writes all results to file'''
-    pass
-
-def _print_result(data):
-    '''writes all results to console'''
-    pass
+def _write_data(data, output_path):
+    '''writes all results either to file or console'''
+    if output_path is not None:
+        print "Finished analysis, data written to %s" %(output_path)
+    else:
+        print "Finished analysis, here is the data:"
+        print data
 
 def _init():
     '''guard clause and init for script'''
@@ -34,13 +34,12 @@ def _main():
     db_path, output = _init()
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
-    #data = evaluator.eval_first_party_cookies()
+    data = {}
+    data = evaluator.eval_first_party_cookies()
     #data = evaluator.eval_third_party_cookies()
-    data = evaluator.rank_third_party_domains()
-    if output is not None:
-        print "Finished analysis, data written to %s" %(output)
-    else:
-        print "Finished analysis, here is the data:"
+    #data = evaluator.rank_third_party_domains()
+    #data = evaluator.rank_third_party_cookie_keys()
+    _write_data(data, output)
     evaluator.close()
 
 #main
