@@ -24,13 +24,18 @@ class DataEvaluator(object):
         pass
 
     def rank_third_party_domains(self):
-        '''Rank most common tracking domains based on dataset (descending)'''
-        data = []
+        '''Rank most common third-party domains based on dataset (descending)'''
+        data = {}
         self.cursor.execute(self.COOKIE_QRY)
-        for site_url, base_domain in self.cursor.fetchall():
-            main_domain = site_url.strip("http://www.")
-        return data
-
+        for site_url, cookie_base_domain in self.cursor.fetchall():
+            main_domain = self._get_domain(site_url)
+            # third-party criteria
+            if main_domain != cookie_base_domain:
+                frequency = data.get(cookie_base_domain, 0)
+                data[cookie_base_domain] = frequency + 1
+        # data is sorted based on frequency in descending order
+        rank = sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
+        return rank
 
     def rank_third_party_cookie_keys(self):
         pass
@@ -39,16 +44,17 @@ class DataEvaluator(object):
         '''Evaluates cookie data based on given operator'''
         data = {}
         self.cursor.execute(self.COOKIE_QRY)
-        for site_url, base_domain in self.cursor.fetchall():
-            main_domain = site_url.strip("http://www.")
+        for site_url, cookie_base_domain in self.cursor.fetchall():
+            main_domain = self._get_domain(site_url)
             # criteria: which domain set the cookie?
-            if operator_func(main_domain, base_domain):
+            if operator_func(main_domain, cookie_base_domain):
                 amount = data.get(main_domain, 0)
                 data[main_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
 
-    def _get_domain(self, url):
+    @staticmethod
+    def _get_domain(url):
         '''Transforms complete site url to domain e.g.
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
         return url.strip("http://www.")

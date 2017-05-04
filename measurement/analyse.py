@@ -34,13 +34,13 @@ def _main():
     db_path, output = _init()
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
-    data = evaluator.eval_first_party_cookies()
-    data = evaluator.eval_third_party_cookies()
+    #data = evaluator.eval_first_party_cookies()
+    #data = evaluator.eval_third_party_cookies()
+    data = evaluator.rank_third_party_domains()
     if output is not None:
         print "Finished analysis, data written to %s" %(output)
     else:
         print "Finished analysis, here is the data:"
-        print data['total_sum']
     evaluator.close()
 
 #main
