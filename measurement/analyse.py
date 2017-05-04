@@ -4,7 +4,7 @@
 Performs analysis based on data captured by crawls in order to answer
 questions formulated in thesis
 '''
-import sys, json, os
+import sys
 from evaluation import DataEvaluator
 
 #constants
@@ -39,6 +39,7 @@ def _main():
     #data = evaluator.eval_third_party_cookies()
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.rank_third_party_cookie_keys()
+    #data = evaluator.eval_flash_cookies()
     _write_data(data, output)
     evaluator.close()
 

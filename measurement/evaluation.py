@@ -5,6 +5,7 @@ class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
     COOKIE_QRY = '''select site_url, baseDomain from site_visits natural join profile_cookies'''
     COOKIE_NAME_QRY = '''select site_url, baseDomain, profile_cookies.name from site_visits natural join profile_cookies'''
+    FLASH_QRY = '''select site_url from site_visits, flash_cookies where site_visits.visit_id == flash_cookies.visit_id'''
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -22,10 +23,15 @@ class DataEvaluator(object):
         return self._eval_cookies(operator.ne)
 
     def eval_flash_cookies(self):
-        pass
+        '''Evaluates which sites make use of flash cookies'''
+        data = {}
+        self.cursor.execute(self.FLASH_QRY)
+        data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
+        data['total_sum'] = len(data['sites'])
+        return data
 
     def rank_third_party_domains(self):
-        '''Rank third-party cookie domains based on dataset (descending)'''
+        '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
         self.cursor.execute(self.COOKIE_QRY)
         for site_url, ck_domain in self.cursor.fetchall():
@@ -38,7 +44,7 @@ class DataEvaluator(object):
         return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
 
     def rank_third_party_cookie_keys(self):
-        '''Rank third-party cookie key based on dataset (descending)'''
+        '''Rank third-party cookie key based on crawl data (descending)'''
         data = {}
         self.cursor.execute(self.COOKIE_NAME_QRY)
         for site_url, ck_domain, ck_name in self.cursor.fetchall():
