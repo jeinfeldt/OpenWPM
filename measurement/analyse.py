@@ -40,7 +40,8 @@ def _main():
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.rank_third_party_cookie_keys()
     #data = evaluator.eval_flash_cookies()
-    data = evaluator.calc_execution_time()
+    #data = evaluator.calc_execution_time()
+    data = evaluator.eval_localstorage_usage()
     _write_data(data, output)
     evaluator.close()
 

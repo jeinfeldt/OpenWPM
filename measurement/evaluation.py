@@ -1,12 +1,26 @@
 '''Contains all objects and functions regarding data evaluation'''
 import sqlite3, operator, time
 
+class Queries(object):
+    '''Encapsulates all necessary queries for evaluation as static variables'''
+
+    COOKIE = '''select site_url, baseDomain
+                    from site_visits natural join profile_cookies'''
+
+    COOKIE_NAME = '''select site_url, baseDomain, profile_cookies.name
+                         from site_visits natural join profile_cookies'''
+
+    FLASH = '''select site_url from site_visits, flash_cookies
+                   where site_visits.visit_id == flash_cookies.visit_id'''
+
+    CRAWL_TIME = '''select min(dtg),max(dtg) from CrawlHistory'''
+
+    LOCALSTORAGE = '''select distinct site_url
+                          from site_visits natural join javascript
+                          where symbol like \'%%localStorage%%\''''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
-    COOKIE_QRY = '''select site_url, baseDomain from site_visits natural join profile_cookies'''
-    COOKIE_NAME_QRY = '''select site_url, baseDomain, profile_cookies.name from site_visits natural join profile_cookies'''
-    FLASH_QRY = '''select site_url from site_visits, flash_cookies where site_visits.visit_id == flash_cookies.visit_id'''
-    CRAWL_TIME_QRY = '''select min(dtg),max(dtg) from CrawlHistory'''
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -26,14 +40,22 @@ class DataEvaluator(object):
     def eval_flash_cookies(self):
         '''Evaluates which sites make use of flash cookies'''
         data = {}
-        self.cursor.execute(self.FLASH_QRY)
+        self.cursor.execute(Queries.FLASH)
         data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
+        data['total_sum'] = len(data['sites'])
+        return data
+
+    def eval_localstorage_usage(self):
+        '''Evaluates the usage of localstorage across unique sites'''
+        data = {}
+        self.cursor.execute(Queries.LOCALSTORAGE)
+        data['sites'] = [self._get_domain(x[0]) for x in self.cursor.fetchall()]
         data['total_sum'] = len(data['sites'])
         return data
 
     def calc_execution_time(self):
         '''Calculates the execution time of the crawl as a formatted string'''
-        self.cursor.execute(self.CRAWL_TIME_QRY)
+        self.cursor.execute(Queries.CRAWL_TIME)
         data = '%sd %sh %smin %ssec'
         time_format = '%Y-%m-%d %H:%M:%S'
         min_time, max_time = self.cursor.fetchall()[0]
@@ -46,7 +68,7 @@ class DataEvaluator(object):
     def rank_third_party_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
-        self.cursor.execute(self.COOKIE_QRY)
+        self.cursor.execute(Queries.COOKIE)
         for site_url, ck_domain in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             # third-party criteria
@@ -59,7 +81,7 @@ class DataEvaluator(object):
     def rank_third_party_cookie_keys(self):
         '''Rank third-party cookie key based on crawl data (descending)'''
         data = {}
-        self.cursor.execute(self.COOKIE_NAME_QRY)
+        self.cursor.execute(Queries.COOKIE_NAME)
         for site_url, ck_domain, ck_name in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             #third-party criteria
@@ -71,7 +93,7 @@ class DataEvaluator(object):
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
         data = {}
-        self.cursor.execute(self.COOKIE_QRY)
+        self.cursor.execute(Queries.COOKIE)
         for site_url, ck_domain in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             # criteria: which domain set the cookie?
