@@ -4,6 +4,7 @@ import sqlite3, operator
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
     COOKIE_QRY = '''select site_url, baseDomain from site_visits natural join profile_cookies'''
+    COOKIE_NAME_QRY = '''select site_url, baseDomain, profile_cookies.name from site_visits natural join profile_cookies'''
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -24,32 +25,40 @@ class DataEvaluator(object):
         pass
 
     def rank_third_party_domains(self):
-        '''Rank most common third-party domains based on dataset (descending)'''
+        '''Rank third-party cookie domains based on dataset (descending)'''
         data = {}
         self.cursor.execute(self.COOKIE_QRY)
-        for site_url, cookie_base_domain in self.cursor.fetchall():
-            main_domain = self._get_domain(site_url)
+        for site_url, ck_domain in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
             # third-party criteria
-            if main_domain != cookie_base_domain:
-                frequency = data.get(cookie_base_domain, 0)
-                data[cookie_base_domain] = frequency + 1
+            if top_domain != ck_domain:
+                frequency = data.get(ck_domain, 0)
+                data[ck_domain] = frequency + 1
         # data is sorted based on frequency in descending order
-        rank = sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
-        return rank
+        return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
 
     def rank_third_party_cookie_keys(self):
-        pass
+        '''Rank third-party cookie key based on dataset (descending)'''
+        data = {}
+        self.cursor.execute(self.COOKIE_NAME_QRY)
+        for site_url, ck_domain, ck_name in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            #third-party criteria
+            if top_domain != ck_domain:
+                frequency = data.get(ck_name, 0)
+                data[ck_name] = frequency + 1
+        return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
 
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
         data = {}
         self.cursor.execute(self.COOKIE_QRY)
-        for site_url, cookie_base_domain in self.cursor.fetchall():
-            main_domain = self._get_domain(site_url)
+        for site_url, ck_domain in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
             # criteria: which domain set the cookie?
-            if operator_func(main_domain, cookie_base_domain):
-                amount = data.get(main_domain, 0)
-                data[main_domain] = amount + 1
+            if operator_func(top_domain, ck_domain):
+                amount = data.get(top_domain, 0)
+                data[top_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
 
