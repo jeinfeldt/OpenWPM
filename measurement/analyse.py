@@ -35,11 +35,12 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     data = {}
-    data = evaluator.eval_first_party_cookies()
+    #data = evaluator.eval_first_party_cookies()
     #data = evaluator.eval_third_party_cookies()
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.rank_third_party_cookie_keys()
     #data = evaluator.eval_flash_cookies()
+    data = evaluator.calc_execution_time()
     _write_data(data, output)
     evaluator.close()
 

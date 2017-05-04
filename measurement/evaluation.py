@@ -1,11 +1,12 @@
 '''Contains all objects and functions regarding data evaluation'''
-import sqlite3, operator
+import sqlite3, operator, time
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
     COOKIE_QRY = '''select site_url, baseDomain from site_visits natural join profile_cookies'''
     COOKIE_NAME_QRY = '''select site_url, baseDomain, profile_cookies.name from site_visits natural join profile_cookies'''
     FLASH_QRY = '''select site_url from site_visits, flash_cookies where site_visits.visit_id == flash_cookies.visit_id'''
+    CRAWL_TIME_QRY = '''select min(dtg),max(dtg) from CrawlHistory'''
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -29,6 +30,18 @@ class DataEvaluator(object):
         data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
         data['total_sum'] = len(data['sites'])
         return data
+
+    def calc_execution_time(self):
+        '''Calculates the execution time of the crawl as a formatted string'''
+        self.cursor.execute(self.CRAWL_TIME_QRY)
+        data = '%sd %sh %smin %ssec'
+        time_format = '%Y-%m-%d %H:%M:%S'
+        min_time, max_time = self.cursor.fetchall()[0]
+        min_strc = time.strptime(min_time, time_format)
+        max_strc = time.strptime(max_time, time_format)
+        strc_diff = time.gmtime(time.mktime(max_strc) - time.mktime(min_strc))
+        # see doc of time_struct for index information
+        return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
     def rank_third_party_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
