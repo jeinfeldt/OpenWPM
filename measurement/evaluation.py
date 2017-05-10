@@ -91,6 +91,26 @@ class DataEvaluator(object):
         data["total_sum"] = len(total_sites)
         return data
 
+    def detect_canvas_fingerprinting(self):
+        '''Detects scripts showing canvas fingerprinting behaviour
+           Approach taken from: A 1-million-site Measurement and Analysis'''
+        pass
+
+    def detect_font_fingerprinting(self):
+        '''Detects scripts showing canvas font fingerprint behaviour
+           Approach taken from: A 1-million-site Measurement and Analysis'''
+        pass
+
+    def detect_web_rtc_fingerprinting(self):
+        '''Detects scripts showing web rtc fingerprinting behaviour
+           Approach taken from: A 1-million-site Measurement and Analysis'''
+        pass
+
+    def detect_general_fingerprinting(self):
+        '''Detects scripts showing general fingerprinting behaviour withoit
+           classification'''
+        pass
+
     def rank_third_party_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
