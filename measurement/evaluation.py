@@ -1,5 +1,5 @@
 '''Contains all objects and functions regarding data evaluation'''
-import sqlite3, operator, time
+import sqlite3, operator, time, json
 
 class Queries(object):
     '''Encapsulates all necessary queries for evaluation as static variables'''
@@ -19,6 +19,9 @@ class Queries(object):
                           from site_visits natural join javascript
                           where symbol like \'%%localStorage%%\''''
 
+    JS_SCRIPTS = '''select site_url, script_url
+                    from site_visits natural join javascript'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -37,6 +40,7 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
+    #TODO: Needs further investment (larger cawl scale) if usable
     def eval_flash_cookies(self):
         '''Evaluates which sites make use of flash cookies'''
         data = {}
@@ -65,6 +69,28 @@ class DataEvaluator(object):
         # see doc of time_struct for index information
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
+    #TODO: Needs further investment (larger cawl scale) if usable
+    def eval_fingerprint_scripts(self, listpath):
+        '''Matches available js-scripts against given fingerprint scripts
+           Note: listpath file should be json'''
+        data = {}
+        found_dic = self.map_js_scripts() # {site: [script...]}
+        blacklist_dic = self._load_json(listpath) #{type: [script...]}
+        for site, found_scripts in found_dic.items():
+            for fp_type, blacklist in blacklist_dic.items():
+                # check if ANY of the found scripts occur in blacklist
+                matched = [x for x in found_scripts if x in blacklist]
+                if len(matched) > 0:
+                    sites = data.get(fp_type, [])
+                    sites.append(site)
+                    data[fp_type] = sites
+        # calc total amount of occurence
+        total_sites = set()
+        for found in data.values():
+            total_sites.update(found)
+        data["total_sum"] = len(total_sites)
+        return data
+
     def rank_third_party_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
@@ -90,6 +116,23 @@ class DataEvaluator(object):
                 data[ck_name] = frequency + 1
         return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
 
+    def map_js_scripts(self):
+        '''Collects all found javascript scripts and maps them to site they
+           occured on'''
+        data = {}
+        self.cursor.execute(Queries.JS_SCRIPTS)
+        for site_url, script_url in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            script_domain = self._get_domain(script_url)
+            # only unique scripts -> set
+            scripts = data.get(top_domain, set([]))
+            scripts.add(script_domain)
+            data[top_domain] = scripts
+        # cast set to list
+        for top_domain, scripts in data.items():
+            data[top_domain] = list(scripts)
+        return data
+
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
         data = {}
@@ -104,10 +147,27 @@ class DataEvaluator(object):
         return data
 
     @staticmethod
+    def _load_json(path):
+        '''Reads json file ignoring comments'''
+        ignore = ["__comment"]
+        with open(path) as raw:
+            data = json.load(raw)
+            for ele in ignore:
+                if ele in data:
+                    data.pop(ele)
+        return data
+
+    @staticmethod
     def _get_domain(url):
         '''Transforms complete site url to domain e.g.
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
-        return url.strip("http://www.")
+        # remove protocol
+        domain = ""
+        protocols = ["http://", "https://"]
+        for ele in protocols:
+            if ele in url:
+                domain = url.lstrip(ele)
+        return domain.lstrip("www.")
 
     def close(self):
         '''closes connection to given db'''

@@ -10,6 +10,7 @@ from evaluation import DataEvaluator
 #constants
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
+FINGERPRINT_BLACKLIST = "fingerprinting_blacklist.json"
 
 def _write_data(data, output_path):
     '''writes all results either to file or console'''
@@ -41,7 +42,9 @@ def _main():
     #data = evaluator.rank_third_party_cookie_keys()
     #data = evaluator.eval_flash_cookies()
     #data = evaluator.calc_execution_time()
-    data = evaluator.eval_localstorage_usage()
+    #data = evaluator.eval_localstorage_usage()
+    #data = evaluator.map_js_scripts()
+    #data = evaluator.eval_fingerprint_scripts(FINGERPRINT_BLACKLIST)
     _write_data(data, output)
     evaluator.close()
 

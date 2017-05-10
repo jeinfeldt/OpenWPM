@@ -1,6 +1,5 @@
 {
-    "__comment": "Blacklist is based on the paper: Online Tracking:
-                  A 1-million-site Measurement and Analysis, by Steven Engelhardt and Arvind Narayanan",
+    "__comment": "Blacklist is based on the paper: Online Tracking: A 1-million-site Measurement and Analysis, by Steven Engelhardt and Arvind Narayanan",
     "canvas": [
       "cdn.doubleverify.com/dvtp_src_internal24.js",
       "cdn.doubleverify.com/dvtp_src_internal23.js",
@@ -27,8 +26,7 @@
       "mathid.mathtag.com/d/i.js",
       "admicro1.vcmedia.vn/core/fipmin.js",
       "pixel.infernotions.com/pixel/",
-      "go.lynxbroker.de/eat_session.js"
-    ],
+      "go.lynxbroker.de/eat_session.js"],
 
     "web-rtc": [
       "cdn.augur.io/augur.min.js",
@@ -48,6 +46,5 @@
       "retailautomata.com/ralib/shopifynew/raa.js",
       "nyan.org/animal/",
       "pixel.infernotions.com/pixel/",
-      "167.88.10.122/ralib/magento/raa.js"
-    ]
+      "167.88.10.122/ralib/magento/raa.js"]
 }
