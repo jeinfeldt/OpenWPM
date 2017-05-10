@@ -93,22 +93,16 @@ class DataEvaluator(object):
 
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
-           Approach taken from: A 1-million-site Measurement and Analysis'''
-        pass
-
-    def detect_font_fingerprinting(self):
-        '''Detects scripts showing canvas font fingerprint behaviour
-           Approach taken from: A 1-million-site Measurement and Analysis'''
-        pass
-
-    def detect_web_rtc_fingerprinting(self):
-        '''Detects scripts showing web rtc fingerprinting behaviour
-           Approach taken from: A 1-million-site Measurement and Analysis'''
+           Approach: A 1-million-site Measurement and Analysis'''
+           # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
+           # canvas elemnt height and width set not below 16px
+           # script should not call save, restore or addEventListner
+           # call to toDataURL or getImageData minimum size 16px x 16px.
         pass
 
     def detect_general_fingerprinting(self):
-        '''Detects scripts showing general fingerprinting behaviour withoit
-           classification'''
+        '''Detects scripts showing general fingerprinting behaviour
+           Approach: FPDetective: Dusting the Web for Fingerprinters'''
         pass
 
     def rank_third_party_domains(self):
