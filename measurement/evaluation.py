@@ -69,7 +69,7 @@ class DataEvaluator(object):
         # see doc of time_struct for index information
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
-    #TODO: Needs further investment (larger cawl scale) if usable
+    #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
     def eval_fingerprint_scripts(self, listpath):
         '''Matches available js-scripts against given fingerprint scripts
            Note: listpath file should be json'''
