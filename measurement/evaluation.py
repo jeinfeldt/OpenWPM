@@ -1,5 +1,5 @@
 '''Contains all objects and functions regarding data evaluation'''
-import sqlite3, operator, time, json
+import sqlite3, operator, time
 
 class Queries(object):
     '''Encapsulates all necessary queries for evaluation as static variables'''
@@ -21,6 +21,10 @@ class Queries(object):
 
     JS_SCRIPTS = '''select site_url, script_url
                     from site_visits natural join javascript'''
+
+    FINGERPRINTING_SCRIPTS = '''select script_url, symbol, operation, value,
+    arguments from javascript where symbol like \"%%HTMLCanvasElement%%\"
+    or symbol like \"%%CanvasRenderingContext2D%%\"'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -70,35 +74,30 @@ class DataEvaluator(object):
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
     #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
-    def eval_fingerprint_scripts(self, listpath):
-        '''Matches available js-scripts against given fingerprint scripts
-           Note: listpath file should be json'''
+    def eval_fingerprint_scripts(self, blacklist):
+        '''Matches found js-scripts against blacklist'''
         data = {}
-        found_dic = self.map_js_scripts() # {site: [script...]}
-        blacklist_dic = self._load_json(listpath) #{type: [script...]}
-        for site, found_scripts in found_dic.items():
-            for fp_type, blacklist in blacklist_dic.items():
-                # check if ANY of the found scripts occur in blacklist
-                matched = [x for x in found_scripts if x in blacklist]
-                if len(matched) > 0:
-                    sites = data.get(fp_type, [])
-                    sites.append(site)
-                    data[fp_type] = sites
+        site_scripts = self.map_site_to_js() # {site: [script...]}
+        for site, scripts in site_scripts.items():
+            # check if ANY of the found scripts occur in blacklist
+            matched = [js for js in scripts if js in blacklist]
+            for match in matched:
+                sites = data.get(match, [])
+                sites.append(site)
+                data[match] = sites
         # calc total amount of occurence
-        total_sites = set()
-        for found in data.values():
-            total_sites.update(found)
-        data["total_sum"] = len(total_sites)
+        unique_sites = set()
+        for sites in data.values():
+            unique_sites.update(sites)
+        data["total_sum"] = len(unique_sites)
         return data
 
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
            Approach: A 1-million-site Measurement and Analysis'''
-           # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
-           # canvas elemnt height and width set not below 16px
-           # script should not call save, restore or addEventListner
-           # call to toDataURL or getImageData minimum size 16px x 16px.
-        pass
+        script_symbols = self._map_js_to_symbol()
+        _ = script_symbols.items()
+        return [js for js, symbols in _ if self._is_fingerprinting(symbols)]
 
     def detect_general_fingerprinting(self):
         '''Detects scripts showing general fingerprinting behaviour
@@ -130,7 +129,7 @@ class DataEvaluator(object):
                 data[ck_name] = frequency + 1
         return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
 
-    def map_js_scripts(self):
+    def map_site_to_js(self):
         '''Collects all found javascript scripts and maps them to site they
            occured on'''
         data = {}
@@ -160,16 +159,39 @@ class DataEvaluator(object):
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
 
-    @staticmethod
-    def _load_json(path):
-        '''Reads json file ignoring comments'''
-        ignore = ["__comment"]
-        with open(path) as raw:
-            data = json.load(raw)
-            for ele in ignore:
-                if ele in data:
-                    data.pop(ele)
+    def _map_js_to_symbol(self):
+        '''Maps scripts to calls (symbol, operation, arguments) associated
+           with canvas fingerprinting'''
+        data = {}
+       # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
+        self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
+        for script, sym, operation, value, args in self.cursor.fetchall():
+            script_domain = self._get_domain(script)
+            calls = data.get(script_domain, [])
+            calls.append((sym, operation, value, args))
+            data[script_domain] = calls
         return data
+
+    #TODO: 3 and 4 not complete yet
+    @staticmethod
+    def _is_fingerprinting(calls):
+        '''Checks whether or not function call is considered fingerprinting'''
+        image_extracted, text_written = False, False
+        for sym, opr, val, args in calls:
+            # canvas: element height and width set not below 16px
+            if "width" in sym or "height" in sym and opr == "set" and int(val) < 16:
+                return False
+            # context: should not call save, restore or addEventListner
+            if "save" in sym or "restore" in sym or "addEventListener" in sym:
+                return False
+            # canvas: text with min. two colors or min. 10 distinct characters
+            if "fillText" in sym and args and len(set(args)) > 12:
+                text_written = True
+            # canvas: call to toDataURL or getImageData minimum size 16px x 16px
+            if "toDataURL" in sym or "getImageData" in sym:
+                image_extracted = True
+        # both conditions must be met to be considered fingerprinting
+        return text_written and image_extracted
 
     @staticmethod
     def _get_domain(url):

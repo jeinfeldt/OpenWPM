@@ -4,13 +4,23 @@
 Performs analysis based on data captured by crawls in order to answer
 questions formulated in thesis
 '''
-import sys
+import sys, json
 from evaluation import DataEvaluator
 
 #constants
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
 FINGERPRINT_BLACKLIST = "fingerprinting_blacklist.json"
+
+def _load_json(path):
+    '''Reads json file ignoring comments'''
+    ignore = ["__comment"]
+    with open(path) as raw:
+        data = json.load(raw)
+        for ele in ignore:
+            if ele in data:
+                data.pop(ele)
+    return data
 
 def _write_data(data, output_path):
     '''writes all results either to file or console'''
@@ -37,14 +47,16 @@ def _main():
     print "Starting analysis..."
     data = {}
     #data = evaluator.eval_first_party_cookies()
-    #data = evaluator.eval_third_party_cookies()
+    data = evaluator.eval_third_party_cookies()
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.rank_third_party_cookie_keys()
     #data = evaluator.eval_flash_cookies()
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
     #data = evaluator.map_js_scripts()
-    #data = evaluator.eval_fingerprint_scripts(FINGERPRINT_BLACKLIST)
+    #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
+    #data = evaluator._map_js_to_symbol()
+    #data = evaluator.detect_canvas_fingerprinting()
     _write_data(data, output)
     evaluator.close()
 
