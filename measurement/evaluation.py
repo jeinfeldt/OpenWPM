@@ -1,5 +1,5 @@
 '''Contains all objects and functions regarding data evaluation'''
-import sqlite3, operator, time
+import sqlite3, operator, time, urlparse
 
 class Queries(object):
     '''Encapsulates all necessary queries for evaluation as static variables'''
@@ -44,6 +44,10 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
+    def eval_tracking_context(self):
+        '''Classifiyes third partys as trackers based on blocking lists'''
+        pass
+
     #TODO: Needs further investment (larger cawl scale) if usable
     def eval_flash_cookies(self):
         '''Evaluates which sites make use of flash cookies'''
@@ -61,18 +65,6 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
-    def calc_execution_time(self):
-        '''Calculates the execution time of the crawl as a formatted string'''
-        self.cursor.execute(Queries.CRAWL_TIME)
-        data = '%sd %sh %smin %ssec'
-        time_format = '%Y-%m-%d %H:%M:%S'
-        min_time, max_time = self.cursor.fetchall()[0]
-        min_strc = time.strptime(min_time, time_format)
-        max_strc = time.strptime(max_time, time_format)
-        strc_diff = time.gmtime(time.mktime(max_strc) - time.mktime(min_strc))
-        # see doc of time_struct for index information
-        return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
-
     #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
     def eval_fingerprint_scripts(self, blacklist):
         '''Matches found js-scripts against blacklist'''
@@ -80,6 +72,7 @@ class DataEvaluator(object):
         site_scripts = self.map_site_to_js() # {site: [script...]}
         for site, scripts in site_scripts.items():
             # check if ANY of the found scripts occur in blacklist
+            # XXX: Compare netlocation and scriptname?
             matched = [js for js in scripts if js in blacklist]
             for match in matched:
                 sites = data.get(match, [])
@@ -91,6 +84,18 @@ class DataEvaluator(object):
             unique_sites.update(sites)
         data["total_sum"] = len(unique_sites)
         return data
+
+    def calc_execution_time(self):
+        '''Calculates the execution time of the crawl as a formatted string'''
+        self.cursor.execute(Queries.CRAWL_TIME)
+        data = '%sd %sh %smin %ssec'
+        time_format = '%Y-%m-%d %H:%M:%S'
+        min_time, max_time = self.cursor.fetchall()[0]
+        min_strc = time.strptime(min_time, time_format)
+        max_strc = time.strptime(max_time, time_format)
+        strc_diff = time.gmtime(time.mktime(max_strc) - time.mktime(min_strc))
+        # see doc of time_struct for index information
+        return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
@@ -105,6 +110,11 @@ class DataEvaluator(object):
         pass
 
     def rank_third_party_domains(self):
+        '''Rank third-party domains based in crawl data (dascending)
+           What domain (resource) is most requested?'''
+        pass
+
+    def rank_third_party_cookie_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE)
@@ -136,10 +146,9 @@ class DataEvaluator(object):
         self.cursor.execute(Queries.JS_SCRIPTS)
         for site_url, script_url in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
-            script_domain = self._get_domain(script_url)
             # only unique scripts -> set
             scripts = data.get(top_domain, set([]))
-            scripts.add(script_domain)
+            scripts.add(script_url)
             data[top_domain] = scripts
         # cast set to list
         for top_domain, scripts in data.items():
@@ -166,10 +175,9 @@ class DataEvaluator(object):
        # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
         self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
         for script, sym, operation, value, args in self.cursor.fetchall():
-            script_domain = self._get_domain(script)
-            calls = data.get(script_domain, [])
+            calls = data.get(script, [])
             calls.append((sym, operation, value, args))
-            data[script_domain] = calls
+            data[script] = calls
         return data
 
     #TODO: 3 and 4 not complete yet
@@ -198,12 +206,8 @@ class DataEvaluator(object):
         '''Transforms complete site url to domain e.g.
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
         # remove protocol
-        domain = ""
-        protocols = ["http://", "https://"]
-        for ele in protocols:
-            if ele in url:
-                domain = url.lstrip(ele)
-        return domain.lstrip("www.")
+        domain = urlparse.urlparse(url).netloc
+        return domain.lstrip("w.")
 
     def close(self):
         '''closes connection to given db'''

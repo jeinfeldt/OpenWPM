@@ -21,7 +21,7 @@ def crawl(sites, browser_params, manager_params):
         command_sequence.get(sleep=0, timeout=120)
         # dump_profile_cookies/dump_flash_cookies closes the current tab.
         command_sequence.dump_profile_cookies(120)
-        #command_sequence.dump_flash_cookies(120)
+        command_sequence.dump_flash_cookies(120)
         manager.execute_command_sequence(command_sequence, index='**')
     # Shuts down the browsers and waits for the data to finish logging
     manager.close()

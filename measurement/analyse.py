@@ -47,14 +47,14 @@ def _main():
     print "Starting analysis..."
     data = {}
     #data = evaluator.eval_first_party_cookies()
-    data = evaluator.eval_third_party_cookies()
-    #data = evaluator.rank_third_party_domains()
+    #data = evaluator.eval_third_party_cookies()
+    #data = evaluator.rank_third_party_cookie_domains()
     #data = evaluator.rank_third_party_cookie_keys()
     #data = evaluator.eval_flash_cookies()
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
-    #data = evaluator.map_js_scripts()
-    #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
+    #data = evaluator.map_site_to_js()
+    data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
     #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
     _write_data(data, output)
