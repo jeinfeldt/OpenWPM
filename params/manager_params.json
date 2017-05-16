@@ -1,6 +1,6 @@
 {
-    "data_directory": "~/openwpm/",
-    "log_directory": "~/openwpm/",
+    "data_directory": "~/thesis/crawl-data/",
+    "log_directory": "~/thesis/crawl-data/",
     "database_name": "crawl-data.sqlite",
     "log_file": "openwpm.log",
     "failure_limit": null,

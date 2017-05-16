@@ -44,12 +44,12 @@ def load_parameters(file_path):
     with open(file_path, 'r') as data:
         return json.load(data)
 
-def generate_db_name(browser_params_path, amount):
+def generate_crawl_prefix(browser_params_path, amount):
     '''adjusts parameters for manager suitable for measurement'''
-    db_name = '%s-%s-%s-crawl-data.sqlite'
+    tmp = '%s-%s-%s-'
     timestamp = strftime("%d%m%y-%H:%M", gmtime())
     prefix = os.path.basename(browser_params_path).split('_')[0]
-    return db_name %(prefix, str(amount), timestamp)
+    return tmp %(prefix, str(amount), timestamp)
 
 def _init():
     '''guard clause and init for script'''
@@ -66,12 +66,14 @@ def _main():
     print 'Preparing crawl...'
     browser_params = load_parameters(browser_path)
     manager_params = load_parameters(manager_path)
-    db_name = generate_db_name(browser_path, amount)
-    manager_params['database_name'] = db_name
+    # better identifiable names for log and db
+    prefix = generate_crawl_prefix(browser_path, amount)
+    manager_params['database_name'] = prefix + manager_params['database_name']
+    manager_params['log_file'] = prefix + manager_params['log_file']
     websites = load_websites(WEBSITE_FILE, int(amount))
     print 'Crawling...'
     crawl(websites, browser_params, manager_params)
-    print 'Finished crawling, data written to: %s' %(db_name)
+    print 'Finished crawling, data written to: %s' %(manager_params['database_name'])
 
 #main
 if __name__ == "__main__":
