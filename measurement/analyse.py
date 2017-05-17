@@ -28,7 +28,7 @@ def _write_data(data, output_path):
         print "Finished analysis, data written to %s" %(output_path)
     else:
         print "Finished analysis, here is the data:"
-        print data
+        print data.items()
 
 def _init():
     '''guard clause and init for script'''
@@ -53,11 +53,13 @@ def _main():
     #data = evaluator.eval_flash_cookies()
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
-    #data = evaluator.map_site_to_js()
+    data = evaluator.map_site_to_js()
     #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
     #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
-    data = evaluator._map_site_to_request()
+    #data = evaluator._map_site_to_request()
+    #data = evaluator.rank_third_party_domains()
+    #data = evaluator.eval_requests()
     _write_data(data, output)
     evaluator.close()
 

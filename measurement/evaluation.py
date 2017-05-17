@@ -1,5 +1,8 @@
 '''Contains all objects and functions regarding data evaluation'''
-import sqlite3, operator, time, urlparse
+import sqlite3
+import operator
+import time
+from tld import get_tld
 
 class Queries(object):
     '''Encapsulates all necessary queries for evaluation as static variables'''
@@ -28,6 +31,8 @@ class Queries(object):
 
     SITE_REQUESTS = '''select site_url, url, method, referrer, headers
                     from site_visits natural join http_requests;'''
+
+    REQUEST_URLS = '''select url from http_requests;'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -78,14 +83,21 @@ class DataEvaluator(object):
             # XXX: Compare netlocation and scriptname?
             matched = [js for js in scripts if js in blacklist]
             for match in matched:
-                sites = data.get(match, [])
-                sites.append(site)
-                data[match] = sites
+                data.setdefault(match, []).append(site)
         # calc total amount of occurence
         unique_sites = set()
         for sites in data.values():
             unique_sites.update(sites)
         data["total_sum"] = len(unique_sites)
+        return data
+
+    def eval_requests(self):
+        '''Evaluates number of request and average'''
+        data = {}
+        sites_requests = self._map_site_to_request()
+        num_requests = [len(x) for x in sites_requests.values()]
+        data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
+        data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
         return data
 
     def calc_execution_time(self):
@@ -115,7 +127,18 @@ class DataEvaluator(object):
     def rank_third_party_domains(self):
         '''Rank third-party domains based in crawl data (dascending)
            What domain (resource) is most requested?'''
-        pass
+        data = {}
+        site_requests = self._map_site_to_request()
+        self.cursor.execute(Queries.REQUEST_URLS)
+        # x[0] -> tuple is returned from query
+        domains = set([self._get_domain(x[0]) for x in self.cursor.fetchall()])
+        for domain in domains:
+            for site, requests in site_requests.items():
+                req_domains = set([self._get_domain(x[0]) for x in requests])
+                if domain in req_domains and domain != site: # third-party only
+                    data.setdefault(domain, []).append(site)
+        data = {domain: len(sites) for domain, sites in data.items()}
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)
 
     def rank_third_party_cookie_domains(self):
         '''Rank third-party cookie domains based on crawl data (descending)'''
@@ -128,7 +151,7 @@ class DataEvaluator(object):
                 frequency = data.get(ck_domain, 0)
                 data[ck_domain] = frequency + 1
         # data is sorted based on frequency in descending order
-        return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)
 
     def rank_third_party_cookie_keys(self):
         '''Rank third-party cookie key based on crawl data (descending)'''
@@ -140,7 +163,7 @@ class DataEvaluator(object):
             if top_domain != ck_domain:
                 frequency = data.get(ck_name, 0)
                 data[ck_name] = frequency + 1
-        return sorted(data.iteritems(), key=lambda (k, v): (v, k), reverse=True)
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)
 
     def map_site_to_js(self):
         '''Collects all found javascript scripts and maps them to site they
@@ -149,13 +172,9 @@ class DataEvaluator(object):
         self.cursor.execute(Queries.JS_SCRIPTS)
         for site_url, script_url in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
-            # only unique scripts -> set
-            scripts = data.get(top_domain, set([]))
-            scripts.add(script_url)
-            data[top_domain] = scripts
+            data.setdefault(top_domain, set([])).add(script_url) # only unique
         # cast set to list
-        for top_domain, scripts in data.items():
-            data[top_domain] = list(scripts)
+        data = {top_domain: list(scripts) for top_domain, scripts in data.items()}
         return data
 
     def _map_js_to_symbol(self):
@@ -165,9 +184,7 @@ class DataEvaluator(object):
        # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
         self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
         for script, sym, operation, value, args in self.cursor.fetchall():
-            calls = data.get(script, [])
-            calls.append((sym, operation, value, args))
-            data[script] = calls
+            data.setdefault(script, []).append((sym, operation, value, args))
         return data
 
     def _map_site_to_request(self):
@@ -176,12 +193,7 @@ class DataEvaluator(object):
         self.cursor.execute(Queries.SITE_REQUESTS)
         for site_url, url, method, referrer, headers in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
-            reqs = data.get(top_domain, [])
-            reqs.append((url, method, referrer, headers))
-            data[top_domain] = reqs
-        # total sum of requests and average per site
-        data['total_sum'] = reduce(lambda x, y: x + y, [len(x) for x in data.values()])
-        data['request_avg'] = data['total_sum'] / len(data.keys())
+            data.setdefault(top_domain, []).append((url, method, referrer, headers))
         return data
 
     def _eval_cookies(self, operator_func):
@@ -223,8 +235,7 @@ class DataEvaluator(object):
         '''Transforms complete site url to domain e.g.
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
         # remove protocol
-        domain = urlparse.urlparse(url).netloc
-        return domain.lstrip("w.")
+        return get_tld(url, fail_silently=True, fix_protocol=True)
 
     def close(self):
         '''closes connection to given db'''
