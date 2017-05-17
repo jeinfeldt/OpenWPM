@@ -4,17 +4,19 @@
 Performs analysis based on data captured by crawls in order to answer
 questions formulated in thesis
 '''
-import sys, json
+import sys
+import json
 from evaluation import DataEvaluator
 
 #constants
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
 FINGERPRINT_BLACKLIST = "fingerprinting_blacklist.json"
+BLOCKLIST = "disconnect_blocklist.json"
 
 def _load_json(path):
     '''Reads json file ignoring comments'''
-    ignore = ["__comment"]
+    ignore = ["__comment", "license"]
     with open(path) as raw:
         data = json.load(raw)
         for ele in ignore:
@@ -28,7 +30,7 @@ def _write_data(data, output_path):
         print "Finished analysis, data written to %s" %(output_path)
     else:
         print "Finished analysis, here is the data:"
-        print data.items()
+        print data
 
 def _init():
     '''guard clause and init for script'''
@@ -53,13 +55,14 @@ def _main():
     #data = evaluator.eval_flash_cookies()
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
-    data = evaluator.map_site_to_js()
+    #data = evaluator.map_site_to_js()
     #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
     #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
     #data = evaluator._map_site_to_request()
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.eval_requests()
+    data = evaluator.eval_tracking_context(_load_json(BLOCKLIST))
     _write_data(data, output)
     evaluator.close()
 

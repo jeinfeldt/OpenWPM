@@ -29,10 +29,11 @@ class Queries(object):
     arguments from javascript where symbol like \"%%HTMLCanvasElement%%\"
     or symbol like \"%%CanvasRenderingContext2D%%\"'''
 
-    SITE_REQUESTS = '''select site_url, url, method, referrer, headers
-                    from site_visits natural join http_requests;'''
+    SITE_THIRD_PARTY_REQUESTS = '''select site_url,url,method,referrer,headers
+    from site_visits natural join http_requests
+    where is_third_party_channel=1'''
 
-    REQUEST_URLS = '''select url from http_requests;'''
+    REQUEST_URLS = '''select url from http_requests'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -52,9 +53,20 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
-    def eval_tracking_context(self):
-        '''Classifiyes third partys as trackers based on blocking lists'''
-        pass
+    def eval_tracking_context(self, blocklist):
+        '''Classifiyes third partys as trackers based on given blocking list
+           List must be in json'''
+        data = {}
+        categorie_domains = {}
+        sites_requests = self._map_site_to_request()
+        #categories: content, analytics, disconnect, advertising, social
+        for category, entries in blocklist['categories'].items():
+            #entry [{org: {maindomain: [domain, ...]}]
+            for entry in entries:
+                for orgname, orgdomain_domains in entry.items():
+                    print  orgdomain_domains.values()[0]
+            break
+        return data
 
     #TODO: Needs further investment (larger cawl scale) if usable
     def eval_flash_cookies(self):
@@ -92,7 +104,7 @@ class DataEvaluator(object):
         return data
 
     def eval_requests(self):
-        '''Evaluates number of request and average'''
+        '''Evaluates number of third-party request and average'''
         data = {}
         sites_requests = self._map_site_to_request()
         num_requests = [len(x) for x in sites_requests.values()]
@@ -135,7 +147,7 @@ class DataEvaluator(object):
         for domain in domains:
             for site, requests in site_requests.items():
                 req_domains = set([self._get_domain(x[0]) for x in requests])
-                if domain in req_domains and domain != site: # third-party only
+                if domain in req_domains:
                     data.setdefault(domain, []).append(site)
         data = {domain: len(sites) for domain, sites in data.items()}
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)
@@ -188,9 +200,9 @@ class DataEvaluator(object):
         return data
 
     def _map_site_to_request(self):
-        '''Maps sites to their requested (http GET) resources'''
+        '''Maps sites to their requested (http GET) third-party resources'''
         data = {}
-        self.cursor.execute(Queries.SITE_REQUESTS)
+        self.cursor.execute(Queries.SITE_THIRD_PARTY_REQUESTS)
         for site_url, url, method, referrer, headers in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             data.setdefault(top_domain, []).append((url, method, referrer, headers))
@@ -208,6 +220,11 @@ class DataEvaluator(object):
                 data[top_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
+
+    @staticmethod
+    def _map_category_to_domains(disconnect_dict):
+        '''Maps all categories flat to their domains'''
+        pass
 
     #TODO: 3 and 4 not complete yet
     @staticmethod
