@@ -54,9 +54,10 @@ def _main():
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
     #data = evaluator.map_site_to_js()
-    data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
+    #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
     #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
+    data = evaluator._map_site_to_request()
     _write_data(data, output)
     evaluator.close()
 

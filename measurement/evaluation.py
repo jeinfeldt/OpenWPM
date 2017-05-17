@@ -26,6 +26,9 @@ class Queries(object):
     arguments from javascript where symbol like \"%%HTMLCanvasElement%%\"
     or symbol like \"%%CanvasRenderingContext2D%%\"'''
 
+    SITE_REQUESTS = '''select site_url, url, method, referrer, headers
+                    from site_visits natural join http_requests;'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -155,6 +158,32 @@ class DataEvaluator(object):
             data[top_domain] = list(scripts)
         return data
 
+    def _map_js_to_symbol(self):
+        '''Maps scripts to calls (symbol, operation, arguments) associated
+           with canvas fingerprinting'''
+        data = {}
+       # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
+        self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
+        for script, sym, operation, value, args in self.cursor.fetchall():
+            calls = data.get(script, [])
+            calls.append((sym, operation, value, args))
+            data[script] = calls
+        return data
+
+    def _map_site_to_request(self):
+        '''Maps sites to their requested (http GET) resources'''
+        data = {}
+        self.cursor.execute(Queries.SITE_REQUESTS)
+        for site_url, url, method, referrer, headers in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            reqs = data.get(top_domain, [])
+            reqs.append((url, method, referrer, headers))
+            data[top_domain] = reqs
+        # total sum of requests and average per site
+        data['total_sum'] = reduce(lambda x, y: x + y, [len(x) for x in data.values()])
+        data['request_avg'] = data['total_sum'] / len(data.keys())
+        return data
+
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
         data = {}
@@ -166,18 +195,6 @@ class DataEvaluator(object):
                 amount = data.get(top_domain, 0)
                 data[top_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
-        return data
-
-    def _map_js_to_symbol(self):
-        '''Maps scripts to calls (symbol, operation, arguments) associated
-           with canvas fingerprinting'''
-        data = {}
-       # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
-        self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
-        for script, sym, operation, value, args in self.cursor.fetchall():
-            calls = data.get(script, [])
-            calls.append((sym, operation, value, args))
-            data[script] = calls
         return data
 
     #TODO: 3 and 4 not complete yet
