@@ -64,7 +64,8 @@ def _main():
     #data = evaluator._map_site_to_request()
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.eval_requests()
-    data = evaluator.eval_tracking_context(_load_json(BLOCKLIST))
+    #data = evaluator.eval_tracking_context(_load_json(BLOCKLIST))
+    data = evaluator.calc_pageload()
     _write_data(data, output)
     evaluator.close()
 

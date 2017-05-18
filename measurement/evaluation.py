@@ -1,6 +1,7 @@
 '''Contains all objects and functions regarding data evaluation'''
 import sqlite3
 import operator
+import datetime
 import time
 from tld import get_tld
 
@@ -34,6 +35,11 @@ class Queries(object):
     where is_third_party_channel=1'''
 
     REQUEST_URLS = '''select url from http_requests'''
+
+    HTTP_TIMESTAMPS = '''select site_url, http_requests.time_stamp, http_responses.time_stamp
+    from site_visits join http_requests on site_visits.visit_id = http_requests.visit_id
+    join http_responses on site_visits.visit_id = http_responses.visit_id
+	where http_requests.id = http_responses.id'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -117,15 +123,31 @@ class DataEvaluator(object):
 
     def calc_execution_time(self):
         '''Calculates the execution time of the crawl as a formatted string'''
-        self.cursor.execute(Queries.CRAWL_TIME)
         data = '%sd %sh %smin %ssec'
         time_format = '%Y-%m-%d %H:%M:%S'
+        self.cursor.execute(Queries.CRAWL_TIME)
         min_time, max_time = self.cursor.fetchall()[0]
         min_strc = time.strptime(min_time, time_format)
         max_strc = time.strptime(max_time, time_format)
         strc_diff = time.gmtime(time.mktime(max_strc) - time.mktime(min_strc))
         # see doc of time_struct for index information
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
+
+    def calc_pageload(self):
+        '''Calculates pageload (initial request to last network activity time for websites'''
+        data = {}
+        self.cursor.execute(Queries.HTTP_TIMESTAMPS)
+        for site, req_timestamp, resp_timestamp in self.cursor.fetchall():
+            data.setdefault(site, []).append((req_timestamp, resp_timestamp))
+        # analysis of timestamps
+        for site, timestamps in data.items():
+            min_req = min([x[0] for x in timestamps])
+            max_resp = max([x[1] for x in timestamps])
+            # calc time difference
+            data[site] = self._calc_request_timediff(min_req, max_resp)
+        avg = reduce(lambda x, y: x + y, data.values()) / len(data.keys())
+        data["loadtime_avg"] = str(avg) + "ms"
+        return data
 
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
@@ -257,6 +279,19 @@ class DataEvaluator(object):
                 image_extracted = True
         # both conditions must be met to be considered fingerprinting
         return text_written and image_extracted
+
+    @staticmethod
+    def _calc_request_timediff(req_timestmp, res_timestmp):
+        '''Calculates the time difference between to timestamps in ms'''
+        dates = []
+        stmp_format = '%Y-%m-%dT%H:%M:%S'
+        for ele in (req_timestmp, res_timestmp):
+            stmp, millisec = ele.split(".")
+            year, mon, day, hour, mint, sec, _, _, _ = time.strptime(stmp, stmp_format)
+            micro = int(millisec.strip("Z"))*1000
+            dates.append(datetime.datetime(year, mon, day, hour, mint, sec, micro))
+        delta = dates[1] - dates[0]
+        return delta.seconds*1000 + delta.microseconds/1000
 
     @staticmethod
     def _get_domain(url):
