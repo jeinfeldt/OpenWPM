@@ -6,6 +6,7 @@ questions formulated in thesis
 '''
 import sys
 import json
+import pprint
 from evaluation import DataEvaluator
 
 #constants
@@ -26,11 +27,12 @@ def _load_json(path):
 
 def _write_data(data, output_path):
     '''writes all results either to file or console'''
+    prettyp = pprint.PrettyPrinter(indent=4)
     if output_path is not None:
         print "Finished analysis, data written to %s" %(output_path)
     else:
         print "Finished analysis, here is the data:"
-        print data
+        prettyp.pprint(data)
 
 def _init():
     '''guard clause and init for script'''

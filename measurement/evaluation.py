@@ -54,18 +54,21 @@ class DataEvaluator(object):
         return self._eval_cookies(operator.ne)
 
     def eval_tracking_context(self, blocklist):
-        '''Classifiyes third partys as trackers based on given blocking list
-           List must be in json'''
+        '''Classifiyes third partys as trackers based on given blocking list (json)
+           data{site: {category: num_tracking_context}, avg: num_tracking_context}'''
         data = {}
-        categorie_domains = {}
+        total_sum = 0
+        categorie_domains = self._map_category_to_domains(blocklist)
         sites_requests = self._map_site_to_request()
         #categories: content, analytics, disconnect, advertising, social
-        for category, entries in blocklist['categories'].items():
-            #entry [{org: {maindomain: [domain, ...]}]
-            for entry in entries:
-                for orgname, orgdomain_domains in entry.items():
-                    print  orgdomain_domains.values()[0]
-            break
+        for site, requests in sites_requests.items():
+            req_domains = [x[0] for x in requests]
+            for category, domains in categorie_domains.items():
+                matches = [x for x in domains if x in "".join(req_domains)]
+                total_sum += len(matches)
+                data.setdefault(site, []).append((category, len(matches)))
+        # calc average number of trackers per page
+        data["tracker_avg"] = total_sum / len(sites_requests.keys())
         return data
 
     #TODO: Needs further investment (larger cawl scale) if usable
@@ -224,7 +227,15 @@ class DataEvaluator(object):
     @staticmethod
     def _map_category_to_domains(disconnect_dict):
         '''Maps all categories flat to their domains'''
-        pass
+        data = {}
+        for category, entries in disconnect_dict['categories'].items():
+            #entry [{org: {maindomain: [domain, ...]}]
+            domains = set()
+            for entry in entries:
+                for _, orgdomain in entry.items():
+                    domains.update(orgdomain.values()[0])
+            data[category] = list(domains)
+        return data
 
     #TODO: 3 and 4 not complete yet
     @staticmethod
