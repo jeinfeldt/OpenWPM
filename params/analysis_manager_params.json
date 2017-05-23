@@ -1,0 +1,12 @@
+{
+    "data_directory": "~/thesis/crawl-data/",
+    "log_directory": "~/thesis/crawl-data/",
+    "database_name": "crawl-data.sqlite",
+    "log_file": "openwpm.log",
+    "failure_limit": null,
+    "testing": false,
+    "num_browsers": 1,
+
+    "crawl_type": "analysis",
+    "num_users": null
+}

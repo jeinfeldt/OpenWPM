@@ -161,6 +161,13 @@ class DataEvaluator(object):
            Approach: FPDetective: Dusting the Web for Fingerprinters'''
         pass
 
+    def detect_trackers(self, minUsers):
+        '''Detects possible user tracking keys based on http request logs per website.
+           Approach: Unsupervised Detection of Web Trackers
+           minUsers: number of distinct user value pairs to observe'''
+        data = {}
+        return data
+
     def rank_third_party_domains(self):
         '''Rank third-party domains based in crawl data (dascending)
            What domain (resource) is most requested?'''
