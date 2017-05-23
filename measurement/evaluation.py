@@ -3,6 +3,7 @@ import sqlite3
 import operator
 import datetime
 import time
+import urlparse
 from tld import get_tld
 
 class Queries(object):
@@ -40,6 +41,15 @@ class Queries(object):
     from site_visits join http_requests on site_visits.visit_id = http_requests.visit_id
     join http_responses on site_visits.visit_id = http_responses.visit_id
 	where http_requests.id = http_responses.id'''
+
+    USER_IDS = '''select distinct(crawl_id) from crawl'''
+
+    REQUESTS_PER_VISIT_PER_ID = '''select site_url,url,referrer
+        from site_visits natural join http_requests
+        where crawl_id=%s and visit_id=%s'''
+
+    VISIT_IDS_PER_USER = '''select distinct(visit_id) from site_visits
+                         where crawl_id=%s'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -161,11 +171,12 @@ class DataEvaluator(object):
            Approach: FPDetective: Dusting the Web for Fingerprinters'''
         pass
 
-    def detect_trackers(self, minUsers):
+    def detect_trackers(self, min_users):
         '''Detects possible user tracking keys based on http request logs per website.
            Approach: Unsupervised Detection of Web Trackers
            minUsers: number of distinct user value pairs to observe'''
         data = {}
+        users_requests = self._prepare_detection_data()
         return data
 
     def rank_third_party_domains(self):
@@ -208,6 +219,27 @@ class DataEvaluator(object):
                 frequency = data.get(ck_name, 0)
                 data[ck_name] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)
+
+    def _prepare_detection_data(self):
+        '''Prepares dict to check for stable user identifiers
+           Users are represented by dicts in lists where site is mapped to a list
+           containing a dict per visit, containing requests and extracted http pairs'''
+        userdata = []
+        # fetch request urls per user per visit
+        for userid in self._get_userids():
+            sitedata = {}
+            for visitid in self._get_visitids(userid):
+                requests, site, visitdata = set(), "", {}
+                self.cursor.execute(Queries.REQUESTS_PER_VISIT_PER_ID %(userid, visitid))
+                for site_url, url, referrer in self.cursor.fetchall():
+                    site = site_url
+                    requests.update([url, referrer])
+                visitdata['urls'] = requests
+                # extract keys and values
+                visitdata['extracted'] = self._extract_http_pairs(list(requests))
+                sitedata.setdefault(site, []).append(visitdata)
+            userdata.append(sitedata)
+        return userdata
 
     def map_site_to_js(self):
         '''Collects all found javascript scripts and maps them to site they
@@ -253,6 +285,16 @@ class DataEvaluator(object):
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         return data
 
+    def _get_visitids(self, userid):
+        '''Fetches correspinding visitids for a user'''
+        self.cursor.execute(Queries.VISIT_IDS_PER_USER %userid)
+        return [x[0] for x in self.cursor.fetchall()]
+
+    def _get_userids(self):
+        '''Fetches user ids from db (defined as crawl_id)'''
+        self.cursor.execute(Queries.USER_IDS)
+        return [x[0] for x in self.cursor.fetchall()]
+
     @staticmethod
     def _map_category_to_domains(disconnect_dict):
         '''Maps all categories flat to their domains'''
@@ -265,6 +307,19 @@ class DataEvaluator(object):
                     domains.update(orgdomain.values()[0])
             data[category] = list(domains)
         return data
+
+    @staticmethod
+    def _extract_http_pairs(urls):
+        '''Extracts url parameters as list of key value touples
+           http://www.acme.com/query?key1=X&key2=Y -> [(key1, X), (key2, Y)]'''
+        pairs = set()
+        if not isinstance(urls, list):
+            urls = [urls]
+        for url in urls:
+            queryparams = urlparse.urlparse(url).query.split("&")
+            parsed = [tuple(x.split("=")) for x in queryparams if ''.join(queryparams) != ""]
+            pairs.update(parsed)
+        return list(pairs)
 
     #TODO: 3 and 4 not complete yet
     @staticmethod

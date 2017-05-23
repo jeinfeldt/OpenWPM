@@ -65,7 +65,10 @@ def _main():
     #data = evaluator.rank_third_party_domains()
     #data = evaluator.eval_requests()
     #data = evaluator.eval_tracking_context(_load_json(BLOCKLIST))
-    data = evaluator.calc_pageload()
+    #data = evaluator.calc_pageload()
+    #data = evaluator.calc_num_users()
+    data = evaluator.detect_trackers(0)
+    #data = evaluator._extract_http_pairs("https://consent.google.com/status?continue=https://www.google.de&pc=s&timestamp=149553886")
     _write_data(data, output)
     evaluator.close()
 

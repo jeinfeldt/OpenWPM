@@ -35,6 +35,7 @@ def _crawl_analysis(sites, browser_params, manager_params):
 def _crawl_detection(sites, browser_params, manager_params):
     '''Runs crawl resulting in dataset for unsupervised tracking detection'''
     num_visits, num_users = manager_params['num_visits'], manager_params['num_users']
+    browser_params['disable_flash'] = True
     for _ in range(0, num_users):
         manager = TaskManager.TaskManager(manager_params, [browser_params])
         for site in sites:
