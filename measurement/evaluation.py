@@ -35,7 +35,8 @@ class Queries(object):
     from site_visits natural join http_requests
     where is_third_party_channel=1'''
 
-    REQUEST_URLS = '''select url from http_requests'''
+    REQUEST_URLS = '''select distinct(url) from http_requests
+                      where is_third_party_channel=1'''
 
     HTTP_TIMESTAMPS = '''select site_url, http_requests.time_stamp, http_responses.time_stamp
     from site_visits join http_requests on site_visits.visit_id = http_requests.visit_id
@@ -50,6 +51,8 @@ class Queries(object):
 
     VISIT_IDS_PER_USER = '''select distinct(visit_id) from site_visits
                          where crawl_id=%s'''
+
+    SITE_URLS_VISITED = '''select site_url from site_visits'''
 
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
@@ -186,23 +189,36 @@ class DataEvaluator(object):
                 data[self._get_domain(site)] = matches
         return data
 
-    def rank_third_party_domains(self):
+    # TODO: check calculation
+    def rank_third_party_prominence(self, amount):
+        '''Ranks third-party domains based on suggested prominence metric
+           Approach: A 1-million-site Measurement and Analysis'''
+        data = {}
+        sites_rank = self._map_site_to_rank()
+        sites_requests = self._map_site_to_request()
+        domains = self._get_requested_domains()
+        for domain in domains:
+            # sum of all 1/rank(site) where domain is present
+            items = sites_requests.items()
+            ranks = [sites_rank[site] for site, req in items if self._is_domain_present(domain, req)]
+            div = reduce(lambda x, y: x + y, ranks)
+            data[domain] = float(len(ranks)) / float(div) # calc prominence
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
+
+    def rank_third_party_domains(self, amount):
         '''Rank third-party domains based in crawl data (dascending)
-           What domain (resource) is most requested?'''
+           What domain (resource) is most requested? Based on prevalence'''
         data = {}
         site_requests = self._map_site_to_request()
-        self.cursor.execute(Queries.REQUEST_URLS)
-        # x[0] -> tuple is returned from query
-        domains = set([self._get_domain(x[0]) for x in self.cursor.fetchall()])
+        domains = self._get_requested_domains()
         for domain in domains:
-            for site, requests in site_requests.items():
-                req_domains = set([self._get_domain(x[0]) for x in requests])
-                if domain in req_domains:
-                    data.setdefault(domain, []).append(site)
-        data = {domain: len(sites) for domain, sites in data.items()}
-        return sorted(data.items(), key=lambda (k, v): v, reverse=True)
+            # fetch sites which request domain
+            items = site_requests.items()
+            sites = [site for site, reqs in items if self._is_domain_present(domain, reqs)]
+            data[domain] = len(sites)
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    def rank_third_party_cookie_domains(self):
+    def rank_third_party_cookie_domains(self, amount):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE)
@@ -213,9 +229,9 @@ class DataEvaluator(object):
                 frequency = data.get(ck_domain, 0)
                 data[ck_domain] = frequency + 1
         # data is sorted based on frequency in descending order
-        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
-    def rank_third_party_cookie_keys(self):
+    def rank_third_party_cookie_keys(self, amount):
         '''Rank third-party cookie key based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE_NAME)
@@ -225,7 +241,7 @@ class DataEvaluator(object):
             if top_domain != ck_domain:
                 frequency = data.get(ck_name, 0)
                 data[ck_name] = frequency + 1
-        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers
@@ -264,10 +280,20 @@ class DataEvaluator(object):
         '''Maps scripts to calls (symbol, operation, arguments) associated
            with canvas fingerprinting'''
         data = {}
-       # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
+        # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
         self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
         for script, sym, operation, value, args in self.cursor.fetchall():
             data.setdefault(script, []).append((sym, operation, value, args))
+        return data
+
+    def _map_site_to_rank(self):
+        '''Maps site to correspinding rank, based on order present in site visit
+           table (first entry, first of list -> rank 1)'''
+        data, rank = {}, 1
+        self.cursor.execute(Queries.SITE_URLS_VISITED)
+        for site in self.cursor.fetchall():
+            data[self._get_domain(site[0])] = rank
+            rank += 1
         return data
 
     def _map_site_to_request(self):
@@ -302,6 +328,12 @@ class DataEvaluator(object):
         self.cursor.execute(Queries.USER_IDS)
         return [x[0] for x in self.cursor.fetchall()]
 
+    def _get_requested_domains(self):
+        '''Fetches all requested unique top domains during crawl'''
+        self.cursor.execute(Queries.REQUEST_URLS)
+        # x[0] -> tuple is returned from query
+        return list(set([self._get_domain(x[0]) for x in self.cursor.fetchall()]))
+
     @staticmethod
     def _find_user_tracking_pairs(userdata, min_users):
         '''Identifies possible user tracking keys in http pairs'''
@@ -322,6 +354,13 @@ class DataEvaluator(object):
         check_val = lambda tpl: distinct_vals(tpl[0]) >= min_users
         # consider threshold for pair value
         return list(set([y for x in userpairs for y in x if check_key(y) and check_val(y)]))
+
+    def _is_domain_present(self, domain, requests):
+        '''Checks whether given third party is present in the given request
+        requests of the site'''
+        req_domains = set([self._get_domain(req[0]) for req in requests])
+        present = True if domain in req_domains else False
+        return present
 
     @staticmethod
     def _map_category_to_domains(disconnect_dict):
