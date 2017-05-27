@@ -10,22 +10,22 @@ class Queries(object):
     '''Encapsulates all necessary queries for evaluation as static variables'''
 
     COOKIE = '''select site_url, baseDomain
-                    from site_visits natural join profile_cookies'''
+    from site_visits natural join profile_cookies'''
 
     COOKIE_NAME = '''select site_url, baseDomain, profile_cookies.name
-                         from site_visits natural join profile_cookies'''
+    from site_visits natural join profile_cookies'''
 
     FLASH = '''select site_url from site_visits, flash_cookies
-                   where site_visits.visit_id == flash_cookies.visit_id'''
+    where site_visits.visit_id == flash_cookies.visit_id'''
 
     CRAWL_TIME = '''select min(dtg),max(dtg) from CrawlHistory'''
 
     LOCALSTORAGE = '''select distinct site_url
-                          from site_visits natural join javascript
-                          where symbol like \'%%localStorage%%\''''
+    from site_visits natural join javascript
+    where symbol like \'%%localStorage%%\''''
 
     JS_SCRIPTS = '''select site_url, script_url
-                    from site_visits natural join javascript'''
+    from site_visits natural join javascript'''
 
     FINGERPRINTING_SCRIPTS = '''select script_url, symbol, operation, value,
     arguments from javascript where symbol like \"%%HTMLCanvasElement%%\"
@@ -36,7 +36,7 @@ class Queries(object):
     where is_third_party_channel=1'''
 
     REQUEST_URLS = '''select distinct(url) from http_requests
-                      where is_third_party_channel=1'''
+    where is_third_party_channel=1'''
 
     HTTP_TIMESTAMPS = '''select site_url, http_requests.time_stamp, http_responses.time_stamp
     from site_visits join http_requests on site_visits.visit_id = http_requests.visit_id
@@ -46,11 +46,11 @@ class Queries(object):
     USER_IDS = '''select distinct(crawl_id) from crawl'''
 
     REQUESTS_PER_VISIT_PER_ID = '''select site_url,url,referrer
-        from site_visits natural join http_requests
-        where crawl_id=%s and visit_id=%s'''
+    from site_visits natural join http_requests
+    where crawl_id=%s and visit_id=%s'''
 
     VISIT_IDS_PER_USER = '''select distinct(visit_id) from site_visits
-                         where crawl_id=%s'''
+    where crawl_id=%s'''
 
     SITE_URLS_VISITED = '''select site_url from site_visits'''
 
