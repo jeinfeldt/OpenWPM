@@ -57,6 +57,11 @@ class Queries(object):
     ID_COOKIES = '''select site_url, name, value, expiry, creationTime
     from profile_cookies natural join site_visits'''
 
+    GET_TIMEOUTS = '''select count(*)
+    from CrawlHistory where command="GET" and  bool_success=-1'''
+
+    NUM_SITES_VISITED = '''select count(distinct(site_url)) from site_visits'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -133,6 +138,16 @@ class DataEvaluator(object):
         num_requests = [len(x) for x in sites_requests.values()]
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
         data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
+        return data
+
+    def eval_crawlsuccess(self):
+        '''Evaluates number of successfull commands and timeouts during crawl'''
+        data = {}
+        self.cursor.execute(Queries.NUM_SITES_VISITED)
+        data['num_pages'] = self.cursor.fetchone()[0]
+        self.cursor.execute(Queries.GET_TIMEOUTS)
+        data['num_timeouts'] = self.cursor.fetchone()[0]
+        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         return data
 
     def calc_execution_time(self):

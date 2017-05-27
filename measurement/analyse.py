@@ -74,7 +74,8 @@ def _main():
     #data = evaluator.rank_third_party_prominence(15)
     #data = evaluator._is_domain_present_db(4, "doubleclick.net")
     #data = evaluator._find_id_cookies()
-    data = evaluator.detect_cookie_syncing()
+    #data = evaluator.detect_cookie_syncing()
+    data = evaluator.eval_crawlsuccess()
     _write_data(data, output)
     evaluator.close()
 
