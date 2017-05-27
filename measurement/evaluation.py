@@ -54,6 +54,9 @@ class Queries(object):
 
     SITE_URLS_VISITED = '''select site_url from site_visits'''
 
+    ID_COOKIES = '''select site_url, name, value, expiry, creationTime
+    from profile_cookies natural join site_visits'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -167,10 +170,28 @@ class DataEvaluator(object):
         _ = script_symbols.items()
         return [js for js, symbols in _ if self._is_fingerprinting(symbols)]
 
+    #TODO: Check methodology and implement
     def detect_general_fingerprinting(self):
         '''Detects scripts showing general fingerprinting behaviour
            Approach: FPDetective: Dusting the Web for Fingerprinters'''
         pass
+
+    def detect_cookie_syncing(self):
+        '''Detects cookie syncing behaviour in http traffic logs
+           Approach: A 1-million-site Measurement and Analysis'''
+        data = {}
+        site_cookies = self._find_id_cookies()
+        site_requests = self._map_site_to_request()
+        for site, cookies in site_cookies.items():
+            #are ids leaked in requested third party urls or referers?
+            requests = site_requests.get(site, [])
+            urls = [tpl[0] for tpl in requests] + list(set([tpl[2] for tpl in requests]))
+            cvalues = [tpl[1] for tpl in cookies]
+            matches = [url for url in urls if len([x for x in cvalues if x in url]) > 0]
+            data[site] = list(set([self._get_domain(x) for x in matches]))
+        # total amount of sites leaking cookie ids
+        data['total_sum'] = len([x for x in data.values() if len(x) > 0])
+        return data
 
     def detect_trackers(self, min_users):
         '''Detects possible user tracking keys based on http request logs per website.
@@ -330,6 +351,22 @@ class DataEvaluator(object):
         # x[0] -> tuple is returned from query
         return list(set([self._get_domain(x[0]) for x in self.cursor.fetchall()]))
 
+    def _is_domain_present(self, domain, requests):
+        '''Checks whether given third party is present in the given request
+        requests of the site'''
+        req_domains = set([self._get_domain(req[0]) for req in requests])
+        return True if domain in req_domains else False
+
+    def _find_id_cookies(self):
+        '''Fetch alls cookies identified as ID Cookies
+        Approach: Approach: A 1-million-site Measurement and Analysis'''
+        data = {}
+        self.cursor.execute(Queries.ID_COOKIES)
+        for site, cname, cvalue, expiry, creation in self.cursor.fetchall():
+            if self._is_id_cookie(cvalue, expiry, creation):
+                data.setdefault(self._get_domain(site), []).append((cname, cvalue))
+        return data
+
     @staticmethod
     def _find_user_tracking_pairs(userdata, min_users):
         '''Identifies possible user tracking keys in http pairs'''
@@ -350,13 +387,6 @@ class DataEvaluator(object):
         check_val = lambda tpl: distinct_vals(tpl[0]) >= min_users
         # consider threshold for pair value
         return list(set([y for x in userpairs for y in x if check_key(y) and check_val(y)]))
-
-    # TODO: Refactor to query db instead of manually check all requests
-    def _is_domain_present(self, domain, requests):
-        '''Checks whether given third party is present in the given request
-        requests of the site'''
-        req_domains = set([self._get_domain(req[0]) for req in requests])
-        return True if domain in req_domains else False
 
     @staticmethod
     def _map_category_to_domains(disconnect_dict):
@@ -383,6 +413,23 @@ class DataEvaluator(object):
             parsed = [tuple(x.split("=")) for x in queryparams if ''.join(queryparams) != ""]
             pairs.update(parsed)
         return list(pairs)
+
+    @staticmethod
+    def _is_id_cookie(cvalue, t_expiry, t_creation):
+        '''Checks whether cookie attributes classify as id cookie'''
+        check = True
+        # note: expiry in sec, creationtime in microsec
+        days_expiry = t_expiry / (60*60*24)
+        days_creation = t_creation / (1000*1000*60*60*24)
+        # expiration date over 90 days in the future
+        if days_expiry - days_creation < 90:
+            check = False
+        # value longer than 8 characters but smaller 100 characters
+        if not 8 <= len(cvalue) <= 100:
+            check = False
+        # value remains the same throughout the measurement
+        # value is different between machines
+        return check
 
     #TODO: 3 and 4 not complete yet
     @staticmethod
