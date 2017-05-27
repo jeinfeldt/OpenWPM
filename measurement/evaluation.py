@@ -54,10 +54,6 @@ class Queries(object):
 
     SITE_URLS_VISITED = '''select site_url from site_visits'''
 
-    REQUESTED_DOMAINS = '''select url, referrer,headers from http_requests
-    where visit_id=%s and is_third_party_channel=1
-    and url like \"%%%s%%\"'''
-
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -123,9 +119,7 @@ class DataEvaluator(object):
             for match in matched:
                 data.setdefault(match, []).append(site)
         # calc total amount of occurence
-        unique_sites = set()
-        for sites in data.values():
-            unique_sites.update(sites)
+        unique_sites = set([site for l in data.values() for site in l])
         data["total_sum"] = len(unique_sites)
         return data
 
@@ -358,10 +352,11 @@ class DataEvaluator(object):
         return list(set([y for x in userpairs for y in x if check_key(y) and check_val(y)]))
 
     # TODO: Refactor to query db instead of manually check all requests
-    def _is_domain_present(self, siterank, domain):
-        '''Checks whether given domain is present (was requested) by
-        the site implicated by rank as a third-party'''
-
+    def _is_domain_present(self, domain, requests):
+        '''Checks whether given third party is present in the given request
+        requests of the site'''
+        req_domains = set([self._get_domain(req[0]) for req in requests])
+        return True if domain in req_domains else False
 
     @staticmethod
     def _map_category_to_domains(disconnect_dict):

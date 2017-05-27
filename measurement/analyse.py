@@ -58,7 +58,7 @@ def _main():
     #data = evaluator.calc_execution_time()
     #data = evaluator.eval_localstorage_usage()
     #data = evaluator.map_site_to_js()
-    #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
+    data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
     #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
     #data = evaluator._map_site_to_request()
@@ -72,7 +72,7 @@ def _main():
     #data = evaluator._extract_http_pairs("https://consent.google.com/status?continue=https://www.google.de&pc=s&timestamp=149553886")
     #data = evaluator._map_site_to_rank()
     #data = evaluator.rank_third_party_prominence(15)
-    data = evaluator._is_domain_present()
+    #data = evaluator._is_domain_present_db(4, "doubleclick.net")
     _write_data(data, output)
     evaluator.close()
 
