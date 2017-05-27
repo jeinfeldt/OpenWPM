@@ -71,7 +71,8 @@ def _main():
     #data = evaluator._prepare_detection_data()
     #data = evaluator._extract_http_pairs("https://consent.google.com/status?continue=https://www.google.de&pc=s&timestamp=149553886")
     #data = evaluator._map_site_to_rank()
-    data = evaluator.rank_third_party_prominence(15)
+    #data = evaluator.rank_third_party_prominence(15)
+    data = evaluator._is_domain_present()
     _write_data(data, output)
     evaluator.close()
 

@@ -54,6 +54,10 @@ class Queries(object):
 
     SITE_URLS_VISITED = '''select site_url from site_visits'''
 
+    REQUESTED_DOMAINS = '''select url, referrer,headers from http_requests
+    where visit_id=%s and is_third_party_channel=1
+    and url like \"%%%s%%\"'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
 
@@ -189,7 +193,6 @@ class DataEvaluator(object):
                 data[self._get_domain(site)] = matches
         return data
 
-    # TODO: check calculation
     def rank_third_party_prominence(self, amount):
         '''Ranks third-party domains based on suggested prominence metric
            Approach: A 1-million-site Measurement and Analysis'''
@@ -197,12 +200,11 @@ class DataEvaluator(object):
         sites_rank = self._map_site_to_rank()
         sites_requests = self._map_site_to_request()
         domains = self._get_requested_domains()
-        for domain in domains:
-            # sum of all 1/rank(site) where domain is present
+        for dom in domains:
+            # prominence: sum of all 1/rank(site) where domain is present
             items = sites_requests.items()
-            ranks = [sites_rank[site] for site, req in items if self._is_domain_present(domain, req)]
-            div = reduce(lambda x, y: x + y, ranks)
-            data[domain] = float(len(ranks)) / float(div) # calc prominence
+            ranks = [sites_rank[site] for site, req in items if self._is_domain_present(dom, req)]
+            data[dom] = reduce(lambda x, y: x + y, [1.0/x for x in ranks])
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
     def rank_third_party_domains(self, amount):
@@ -355,12 +357,11 @@ class DataEvaluator(object):
         # consider threshold for pair value
         return list(set([y for x in userpairs for y in x if check_key(y) and check_val(y)]))
 
-    def _is_domain_present(self, domain, requests):
-        '''Checks whether given third party is present in the given request
-        requests of the site'''
-        req_domains = set([self._get_domain(req[0]) for req in requests])
-        present = True if domain in req_domains else False
-        return present
+    # TODO: Refactor to query db instead of manually check all requests
+    def _is_domain_present(self, siterank, domain):
+        '''Checks whether given domain is present (was requested) by
+        the site implicated by rank as a third-party'''
+
 
     @staticmethod
     def _map_category_to_domains(disconnect_dict):
