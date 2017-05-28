@@ -27,9 +27,12 @@ class Queries(object):
     JS_SCRIPTS = '''select site_url, script_url
     from site_visits natural join javascript'''
 
-    FINGERPRINTING_SCRIPTS = '''select script_url, symbol, operation, value,
+    CANVAS_SCRIPTS = '''select script_url, symbol, operation, value,
     arguments from javascript where symbol like \"%%HTMLCanvasElement%%\"
     or symbol like \"%%CanvasRenderingContext2D%%\"'''
+
+    FONT_SCRIPTS = '''select script_url, symbol, operation, value,
+    arguments from javascript where symbol like \"%%font%%\"'''
 
     SITE_THIRD_PARTY_REQUESTS = '''select site_url,url,method,referrer,headers
     from site_visits natural join http_requests
@@ -181,15 +184,16 @@ class DataEvaluator(object):
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
            Approach: A 1-million-site Measurement and Analysis'''
-        script_symbols = self._map_js_to_symbol()
-        _ = script_symbols.items()
-        return [js for js, symbols in _ if self._is_fingerprinting(symbols)]
+        script_symbols = self._map_js_to_symbol(Queries.CANVAS_SCRIPTS)
+        items = script_symbols.items()
+        return [js for js, sym in items if self._is_canvas_fingerprinting(sym)]
 
-    #TODO: Check methodology and implement
-    def detect_general_fingerprinting(self):
-        '''Detects scripts showing general fingerprinting behaviour
+    def detect_font_fingerprinting(self):
+        '''Detects scripts showing general fingerprinting (font probing) behaviour
            Approach: FPDetective: Dusting the Web for Fingerprinters'''
-        pass
+        script_symbols = self._map_js_to_symbol(Queries.FONT_SCRIPTS)
+        items = script_symbols.items()
+        return [js for js, sym in items if self._is_font_fingerprinting(sym)]
 
     def detect_cookie_syncing(self):
         '''Detects cookie syncing behaviour in http traffic logs
@@ -308,12 +312,12 @@ class DataEvaluator(object):
         data = {top_domain: list(scripts) for top_domain, scripts in data.items()}
         return data
 
-    def _map_js_to_symbol(self):
+    def _map_js_to_symbol(self, query):
         '''Maps scripts to calls (symbol, operation, arguments) associated
            with canvas fingerprinting'''
         data = {}
-        # match sript_url to HTMLCanvasElement and CanvasRendering2DContext calls
-        self.cursor.execute(Queries.FINGERPRINTING_SCRIPTS)
+        # match sript_url to correspinding symbols
+        self.cursor.execute(query)
         for script, sym, operation, value, args in self.cursor.fetchall():
             data.setdefault(script, []).append((sym, operation, value, args))
         return data
@@ -448,8 +452,9 @@ class DataEvaluator(object):
 
     #TODO: 3 and 4 not complete yet
     @staticmethod
-    def _is_fingerprinting(calls):
-        '''Checks whether or not function call is considered fingerprinting'''
+    def _is_canvas_fingerprinting(calls):
+        '''Checks if function calls resemble canvas fingerprinting behaviour
+           Approach: A 1-million-site Measurement and Analysis'''
         image_extracted, text_written = False, False
         for sym, opr, val, args in calls:
             # canvas: element height and width set not below 16px
@@ -466,6 +471,14 @@ class DataEvaluator(object):
                 image_extracted = True
         # both conditions must be met to be considered fingerprinting
         return text_written and image_extracted
+
+    @staticmethod
+    def _is_font_fingerprinting(calls):
+        '''Checks if function calls resemble font fingerprinting behaviour
+           Approach: FPDetective: Dusting the Web for Fingerprinters'''
+        threshold = 30
+        matches = set([val for _, op, val, _ in calls if op == 'set'])
+        return True if len(matches) >= threshold else False
 
     @staticmethod
     def _calc_request_timediff(req_timestmp, res_timestmp):

@@ -59,7 +59,6 @@ def _main():
     #data = evaluator.eval_localstorage_usage()
     #data = evaluator.map_site_to_js()
     #data = evaluator.eval_fingerprint_scripts(evaluator.detect_canvas_fingerprinting())
-    #data = evaluator._map_js_to_symbol()
     #data = evaluator.detect_canvas_fingerprinting()
     #data = evaluator._map_site_to_request()
     #data = evaluator.rank_third_party_domains(10)
@@ -75,7 +74,8 @@ def _main():
     #data = evaluator._is_domain_present_db(4, "doubleclick.net")
     #data = evaluator._find_id_cookies()
     #data = evaluator.detect_cookie_syncing()
-    data = evaluator.eval_crawlsuccess()
+    #data = evaluator.eval_crawlsuccess()
+    data = evaluator.detect_font_fingerprinting()
     _write_data(data, output)
     evaluator.close()
 
