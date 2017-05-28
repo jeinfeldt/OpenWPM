@@ -73,76 +73,13 @@ class DataEvaluator(object):
         self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
 
-    def eval_first_party_cookies(self):
-        '''Evaluates prevalence of first party cookies based on crawl data.
-           first-party: cookies set by top level domain'''
-        return self._eval_cookies(operator.eq)
+    def close(self):
+        '''closes connection to given db'''
+        self.connection.close()
 
-    def eval_third_party_cookies(self):
-        '''Evaluates prevalence of third party cookies based on crawl data.
-           third-party: cookies set outside of top level domain'''
-        return self._eval_cookies(operator.ne)
-
-    def eval_tracking_context(self, blocklist):
-        '''Classifiyes third partys as trackers based on given blocking list (json)
-           data{site: {category: num_tracking_context}, avg: num_tracking_context}'''
-        data = {}
-        total_sum = 0
-        categorie_domains = self._map_category_to_domains(blocklist)
-        sites_requests = self._map_site_to_request()
-        #categories: content, analytics, disconnect, advertising, social
-        for site, requests in sites_requests.items():
-            req_domains = [x[0] for x in requests]
-            for category, domains in categorie_domains.items():
-                matches = [x for x in domains if x in "".join(req_domains)]
-                total_sum += len(matches)
-                data.setdefault(site, []).append((category, len(matches)))
-        # calc average number of trackers per page
-        data["tracker_avg"] = total_sum / len(sites_requests.keys())
-        return data
-
-    #TODO: Needs further investment (larger cawl scale) if usable
-    def eval_flash_cookies(self):
-        '''Evaluates which sites make use of flash cookies'''
-        data = {}
-        self.cursor.execute(Queries.FLASH)
-        data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
-        data['total_sum'] = len(data['sites'])
-        return data
-
-    def eval_localstorage_usage(self):
-        '''Evaluates the usage of localstorage across unique sites'''
-        data = {}
-        self.cursor.execute(Queries.LOCALSTORAGE)
-        data['sites'] = [self._get_domain(x[0]) for x in self.cursor.fetchall()]
-        data['total_sum'] = len(data['sites'])
-        return data
-
-    #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
-    def eval_fingerprint_scripts(self, blacklist):
-        '''Matches found js-scripts against blacklist'''
-        data = {}
-        site_scripts = self.map_site_to_js() # {site: [script...]}
-        for site, scripts in site_scripts.items():
-            # check if ANY of the found scripts occur in blacklist
-            # XXX: Compare netlocation and scriptname?
-            matched = [js for js in scripts if js in blacklist]
-            for match in matched:
-                data.setdefault(match, []).append(site)
-        # calc total amount of occurence
-        unique_sites = set([site for l in data.values() for site in l])
-        data["total_sum"] = len(unique_sites)
-        return data
-
-    def eval_requests(self):
-        '''Evaluates number of third-party request and average'''
-        data = {}
-        sites_requests = self._map_site_to_request()
-        num_requests = [len(x) for x in sites_requests.values()]
-        data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
-        data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
-        return data
-
+    #---------------------------------------------------------------------------
+    # CRAWL ANALYSIS
+    #---------------------------------------------------------------------------
     def eval_crawlsuccess(self):
         '''Evaluates number of successfull commands and timeouts during crawl'''
         data = {}
@@ -165,6 +102,104 @@ class DataEvaluator(object):
         # see doc of time_struct for index information
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
 
+    #---------------------------------------------------------------------------
+    # STORAGE ANALYSIS
+    #---------------------------------------------------------------------------
+    def eval_first_party_cookies(self):
+        '''Evaluates prevalence of first party cookies based on crawl data.
+           first-party: cookies set by top level domain'''
+        return self._eval_cookies(operator.eq)
+
+    def eval_third_party_cookies(self):
+        '''Evaluates prevalence of third party cookies based on crawl data.
+           third-party: cookies set outside of top level domain'''
+        return self._eval_cookies(operator.ne)
+
+    #TODO: Needs further investment (larger cawl scale) if usable
+    def eval_flash_cookies(self):
+        '''Evaluates which sites make use of flash cookies'''
+        data = {}
+        self.cursor.execute(Queries.FLASH)
+        data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
+        data['total_sum'] = len(data['sites'])
+        return data
+
+    def eval_localstorage_usage(self):
+        '''Evaluates the usage of localstorage across unique sites'''
+        data = {}
+        self.cursor.execute(Queries.LOCALSTORAGE)
+        data['sites'] = [self._get_domain(x[0]) for x in self.cursor.fetchall()]
+        data['total_sum'] = len(data['sites'])
+        return data
+
+    def rank_third_party_cookie_domains(self, amount):
+        '''Rank third-party cookie domains based on crawl data (descending)'''
+        data = {}
+        self.cursor.execute(Queries.COOKIE)
+        for site_url, ck_domain in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            # third-party criteria
+            if top_domain != ck_domain:
+                frequency = data.get(ck_domain, 0)
+                data[ck_domain] = frequency + 1
+        # data is sorted based on frequency in descending order
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
+
+    def rank_third_party_cookie_keys(self, amount):
+        '''Rank third-party cookie key based on crawl data (descending)'''
+        data = {}
+        self.cursor.execute(Queries.COOKIE_NAME)
+        for site_url, ck_domain, ck_name in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            #third-party criteria
+            if top_domain != ck_domain:
+                frequency = data.get(ck_name, 0)
+                data[ck_name] = frequency + 1
+        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
+
+    def _eval_cookies(self, operator_func):
+        '''Evaluates cookie data based on given operator'''
+        data = {}
+        self.cursor.execute(Queries.COOKIE)
+        for site_url, ck_domain in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            # criteria: which domain set the cookie?
+            if operator_func(top_domain, ck_domain):
+                amount = data.get(top_domain, 0)
+                data[top_domain] = amount + 1
+        data['total_sum'] = reduce(lambda x, y: x + y, data.values())
+        return data
+
+    #---------------------------------------------------------------------------
+    # HTTP-TRAFFIC ANALYSIS
+    #---------------------------------------------------------------------------
+    def eval_requests(self):
+        '''Evaluates number of third-party request and average'''
+        data = {}
+        sites_requests = self._map_site_to_requests()
+        num_requests = [len(x) for x in sites_requests.values()]
+        data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
+        data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
+        return data
+
+    def eval_tracking_context(self, blocklist):
+        '''Classifiyes third partys as trackers based on given blocking list (json)
+           data{site: {category: num_tracking_context}, avg: num_tracking_context}'''
+        data = {}
+        total_sum = 0
+        categorie_domains = self._map_category_to_domains(blocklist)
+        sites_requests = self._map_site_to_requests()
+        #categories: content, analytics, disconnect, advertising, social
+        for site, requests in sites_requests.items():
+            req_domains = [x[0] for x in requests]
+            for category, domains in categorie_domains.items():
+                matches = [x for x in domains if x in "".join(req_domains)]
+                total_sum += len(matches)
+                data.setdefault(site, []).append((category, len(matches)))
+        # calc average number of trackers per page
+        data["tracker_avg"] = total_sum / len(sites_requests.keys())
+        return data
+
     def calc_pageload(self):
         '''Calculates pageload (initial request to last network activity time for websites'''
         data = {}
@@ -181,26 +216,12 @@ class DataEvaluator(object):
         data["loadtime_avg"] = str(avg) + "ms"
         return data
 
-    def detect_canvas_fingerprinting(self):
-        '''Detects scripts showing canvas fingerprinting behaviour
-           Approach: A 1-million-site Measurement and Analysis'''
-        script_symbols = self._map_js_to_symbol(Queries.CANVAS_SCRIPTS)
-        items = script_symbols.items()
-        return [js for js, sym in items if self._is_canvas_fingerprinting(sym)]
-
-    def detect_font_fingerprinting(self):
-        '''Detects scripts showing general fingerprinting (font probing) behaviour
-           Approach: FPDetective: Dusting the Web for Fingerprinters'''
-        script_symbols = self._map_js_to_symbol(Queries.FONT_SCRIPTS)
-        items = script_symbols.items()
-        return [js for js, sym in items if self._is_font_fingerprinting(sym)]
-
     def detect_cookie_syncing(self):
         '''Detects cookie syncing behaviour in http traffic logs
            Approach: A 1-million-site Measurement and Analysis'''
         data = {}
         site_cookies = self._find_id_cookies()
-        site_requests = self._map_site_to_request()
+        site_requests = self._map_site_to_requests()
         for site, cookies in site_cookies.items():
             #are ids leaked in requested third party urls or referers?
             requests = site_requests.get(site, [])
@@ -232,7 +253,7 @@ class DataEvaluator(object):
            Approach: A 1-million-site Measurement and Analysis'''
         data = {}
         sites_rank = self._map_site_to_rank()
-        sites_requests = self._map_site_to_request()
+        sites_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
         for dom in domains:
             # prominence: sum of all 1/rank(site) where domain is present
@@ -245,7 +266,7 @@ class DataEvaluator(object):
         '''Rank third-party domains based in crawl data (dascending)
            What domain (resource) is most requested? Based on prevalence'''
         data = {}
-        site_requests = self._map_site_to_request()
+        site_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
         for domain in domains:
             # fetch sites which request domain
@@ -253,31 +274,6 @@ class DataEvaluator(object):
             sites = [site for site, reqs in items if self._is_domain_present(domain, reqs)]
             data[domain] = len(sites)
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
-
-    def rank_third_party_cookie_domains(self, amount):
-        '''Rank third-party cookie domains based on crawl data (descending)'''
-        data = {}
-        self.cursor.execute(Queries.COOKIE)
-        for site_url, ck_domain in self.cursor.fetchall():
-            top_domain = self._get_domain(site_url)
-            # third-party criteria
-            if top_domain != ck_domain:
-                frequency = data.get(ck_domain, 0)
-                data[ck_domain] = frequency + 1
-        # data is sorted based on frequency in descending order
-        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
-
-    def rank_third_party_cookie_keys(self, amount):
-        '''Rank third-party cookie key based on crawl data (descending)'''
-        data = {}
-        self.cursor.execute(Queries.COOKIE_NAME)
-        for site_url, ck_domain, ck_name in self.cursor.fetchall():
-            top_domain = self._get_domain(site_url)
-            #third-party criteria
-            if top_domain != ck_domain:
-                frequency = data.get(ck_name, 0)
-                data[ck_name] = frequency + 1
-        return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers
@@ -299,60 +295,6 @@ class DataEvaluator(object):
                 sitedata.setdefault(site, []).append(visitdata)
             userdata.append(sitedata)
         return userdata
-
-    def map_site_to_js(self):
-        '''Collects all found javascript scripts and maps them to site they
-           occured on'''
-        data = {}
-        self.cursor.execute(Queries.JS_SCRIPTS)
-        for site_url, script_url in self.cursor.fetchall():
-            top_domain = self._get_domain(site_url)
-            data.setdefault(top_domain, set([])).add(script_url) # only unique
-        # cast set to list
-        data = {top_domain: list(scripts) for top_domain, scripts in data.items()}
-        return data
-
-    def _map_js_to_symbol(self, query):
-        '''Maps scripts to calls (symbol, operation, arguments) associated
-           with canvas fingerprinting'''
-        data = {}
-        # match sript_url to correspinding symbols
-        self.cursor.execute(query)
-        for script, sym, operation, value, args in self.cursor.fetchall():
-            data.setdefault(script, []).append((sym, operation, value, args))
-        return data
-
-    def _map_site_to_rank(self):
-        '''Maps site to correspinding rank, based on order present in site visit
-           table (first entry, first of list -> rank 1)'''
-        data, rank = {}, 1
-        self.cursor.execute(Queries.SITE_URLS_VISITED)
-        for site in self.cursor.fetchall():
-            data[self._get_domain(site[0])] = rank
-            rank += 1
-        return data
-
-    def _map_site_to_request(self):
-        '''Maps sites to their requested (http GET) third-party resources'''
-        data = {}
-        self.cursor.execute(Queries.SITE_THIRD_PARTY_REQUESTS)
-        for site_url, url, method, referrer, headers in self.cursor.fetchall():
-            top_domain = self._get_domain(site_url)
-            data.setdefault(top_domain, []).append((url, method, referrer, headers))
-        return data
-
-    def _eval_cookies(self, operator_func):
-        '''Evaluates cookie data based on given operator'''
-        data = {}
-        self.cursor.execute(Queries.COOKIE)
-        for site_url, ck_domain in self.cursor.fetchall():
-            top_domain = self._get_domain(site_url)
-            # criteria: which domain set the cookie?
-            if operator_func(top_domain, ck_domain):
-                amount = data.get(top_domain, 0)
-                data[top_domain] = amount + 1
-        data['total_sum'] = reduce(lambda x, y: x + y, data.values())
-        return data
 
     def _get_visitids(self, userid):
         '''Fetches correspinding visitids for a user'''
@@ -450,6 +392,52 @@ class DataEvaluator(object):
         # value is different between machines
         return check
 
+    @staticmethod
+    def _calc_request_timediff(req_timestmp, res_timestmp):
+        '''Calculates the time difference between to timestamps in ms'''
+        dates = []
+        stmp_format = '%Y-%m-%dT%H:%M:%S'
+        for ele in (req_timestmp, res_timestmp):
+            stmp, millisec = ele.split(".")
+            year, mon, day, hour, mint, sec, _, _, _ = time.strptime(stmp, stmp_format)
+            micro = int(millisec.strip("Z"))*1000
+            dates.append(datetime.datetime(year, mon, day, hour, mint, sec, micro))
+        delta = dates[1] - dates[0]
+        return delta.seconds*1000 + delta.microseconds/1000
+
+    #---------------------------------------------------------------------------
+    # FINGERPRINTING ANALYSIS
+    #---------------------------------------------------------------------------
+    #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
+    def eval_fingerprint_scripts(self, blacklist):
+        '''Matches found js-scripts against blacklist'''
+        data = {}
+        site_scripts = self._map_site_to_js() # {site: [script...]}
+        for site, scripts in site_scripts.items():
+            # check if ANY of the found scripts occur in blacklist
+            # XXX: Compare netlocation and scriptname?
+            matched = [js for js in scripts if js in blacklist]
+            for match in matched:
+                data.setdefault(match, []).append(site)
+        # calc total amount of occurence
+        unique_sites = set([site for l in data.values() for site in l])
+        data["total_sum"] = len(unique_sites)
+        return data
+
+    def detect_canvas_fingerprinting(self):
+        '''Detects scripts showing canvas fingerprinting behaviour
+           Approach: A 1-million-site Measurement and Analysis'''
+        script_symbols = self._map_js_to_symbol(Queries.CANVAS_SCRIPTS)
+        items = script_symbols.items()
+        return [js for js, sym in items if self._is_canvas_fingerprinting(sym)]
+
+    def detect_font_fingerprinting(self):
+        '''Detects scripts showing general fingerprinting (font probing) behaviour
+           Approach: FPDetective: Dusting the Web for Fingerprinters'''
+        script_symbols = self._map_js_to_symbol(Queries.FONT_SCRIPTS)
+        items = script_symbols.items()
+        return [js for js, sym in items if self._is_font_fingerprinting(sym)]
+
     #TODO: 3 and 4 not complete yet
     @staticmethod
     def _is_canvas_fingerprinting(calls):
@@ -480,18 +468,49 @@ class DataEvaluator(object):
         matches = set([val for _, op, val, _ in calls if op == 'set'])
         return True if len(matches) >= threshold else False
 
-    @staticmethod
-    def _calc_request_timediff(req_timestmp, res_timestmp):
-        '''Calculates the time difference between to timestamps in ms'''
-        dates = []
-        stmp_format = '%Y-%m-%dT%H:%M:%S'
-        for ele in (req_timestmp, res_timestmp):
-            stmp, millisec = ele.split(".")
-            year, mon, day, hour, mint, sec, _, _, _ = time.strptime(stmp, stmp_format)
-            micro = int(millisec.strip("Z"))*1000
-            dates.append(datetime.datetime(year, mon, day, hour, mint, sec, micro))
-        delta = dates[1] - dates[0]
-        return delta.seconds*1000 + delta.microseconds/1000
+    #---------------------------------------------------------------------------
+    # UTILITIES
+    #---------------------------------------------------------------------------
+    def _map_site_to_js(self):
+        '''Collects all found javascript scripts and maps them to site they
+           occured on'''
+        data = {}
+        self.cursor.execute(Queries.JS_SCRIPTS)
+        for site_url, script_url in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            data.setdefault(top_domain, set([])).add(script_url) # only unique
+        # cast set to list
+        data = {top_domain: list(scripts) for top_domain, scripts in data.items()}
+        return data
+
+    def _map_js_to_symbol(self, query):
+        '''Maps scripts to calls (symbol, operation, arguments) associated
+           with canvas fingerprinting'''
+        data = {}
+        # match sript_url to correspinding symbols
+        self.cursor.execute(query)
+        for script, sym, operation, value, args in self.cursor.fetchall():
+            data.setdefault(script, []).append((sym, operation, value, args))
+        return data
+
+    def _map_site_to_rank(self):
+        '''Maps site to correspinding rank, based on order present in site visit
+           table (first entry, first of list -> rank 1)'''
+        data, rank = {}, 1
+        self.cursor.execute(Queries.SITE_URLS_VISITED)
+        for site in self.cursor.fetchall():
+            data[self._get_domain(site[0])] = rank
+            rank += 1
+        return data
+
+    def _map_site_to_requests(self):
+        '''Maps sites to their requested (http GET) third-party resources'''
+        data = {}
+        self.cursor.execute(Queries.SITE_THIRD_PARTY_REQUESTS)
+        for site_url, url, method, referrer, headers in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            data.setdefault(top_domain, []).append((url, method, referrer, headers))
+        return data
 
     @staticmethod
     def _get_domain(url):
@@ -499,7 +518,3 @@ class DataEvaluator(object):
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
         # remove protocol
         return get_tld(url, fail_silently=True, fix_protocol=True)
-
-    def close(self):
-        '''closes connection to given db'''
-        self.connection.close()
