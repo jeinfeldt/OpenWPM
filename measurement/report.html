@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+          crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <title>Crawl-Evaluation Report</title>
+</head>
+<body>
+    <h4>Summary for Crawl</h4>
+    <!-- Meta Data (num_pages,num_timeouts,rate_timeouts,time)-->
+    <table class="table table-bordered">
+      <tr>
+        <th>sites</th>
+        <th>crawltype*</th>
+        <th>runtime</th>
+        <th>timeouts</th>
+        <th>timeoutrate</th>
+      </tr>
+      <tr>
+        <td>{{num_pages}}</td>
+        <td>vanilla*</td>
+        <td>{{time}}</td>
+        <td>{{num_timeouts}}</td>
+        <td>{{rate_timeouts}}</td>
+      </tr>
+    </table>
+    <p>*<span style="font-weight: bold;">crawltype</span> refers to the configuration of employed browser</p>
+    <p>vanilla(no plugins), ghostery, disconnect, dnt(Do Not Track header), adblock</p>
+    <hr>
+    <!-- Storage (firstparty_cookies,thirdparty_cookies,flash_cookies,localstorage)-->
+    <hr>
+    <!-- Storage Ranks (rank_cookie_domains,rank_cookie_keys)-->
+    <hr>
+    <!-- Http (trackingcontext,loadingtime,cookiesync)-->
+    <hr>
+    <!-- Http Ranks (prominence_rank,simple_rank)-->
+    <hr>
+    <!-- Fingerprinting (fingerprint_matches,detected_canvas_js,detected_font_js)-->
+</body>
+</html>

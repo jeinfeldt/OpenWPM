@@ -6,7 +6,7 @@ questions formulated in thesis
 '''
 import sys
 import json
-import pprint
+import dataoutput
 from evaluation import DataEvaluator
 
 #constants
@@ -29,14 +29,14 @@ def _init_evaluation(eva, db_path):
                             ("rank_cookie_domains", eva.rank_third_party_cookie_domains),
                             ("rank_cookie_keys", eva.rank_third_party_cookie_keys)],
                 "http": [("requests", eva.eval_requests),
-                         #("trackingcontext", eva.eval_tracking_context), # needs parameter
+                         #("trackingcontext", eva.eval_tracking_context), #param
                          #("loadingtime", eva.calc_pageload),
                          #("cookiesync", eva.detect_cookie_syncing),
                          #("prominence_rank", eva.rank_third_party_prominence),
                          #("simple_rank", eva.rank_third_party_domains)
                          ],
                 "fingerprinting": [
-                                   #("fingerprint_matches", eva.eval_fingerprint_scripts), # needs parameter
+                                   #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
                                    #("detected_canvas_js", eva.detect_canvas_fingerprinting),
                                    #("detected_font_js", eva.detect_font_fingerprinting)
                                    ]}
@@ -57,15 +57,6 @@ def _load_json(path):
             if ele in data:
                 data.pop(ele)
     return data
-
-def _write_data(data, output_path):
-    '''writes all results either to file or console'''
-    prettyp = pprint.PrettyPrinter(indent=4)
-    if output_path is not None:
-        print "Finished analysis, data written to %s" %(output_path)
-    else:
-        print "Finished analysis, here is the data:"
-        prettyp.pprint(data)
 
 def _init():
     '''guard clause and init for script'''
@@ -101,7 +92,11 @@ def _main():
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator, db_path)
     data = evaluate(evaluation)
-    _write_data(data, output)
+    if output is not None:
+        print "Finished analysis, data written to %s" %(output)
+    else:
+        print "Finished analysis, here is the data:"
+    dataoutput.write_data(data, output)
     evaluator.close()
 
 #main
