@@ -132,7 +132,7 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
-    def rank_third_party_cookie_domains(self, amount=15):
+    def rank_third_party_cookie_domains(self, amount=5):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE)
@@ -145,7 +145,7 @@ class DataEvaluator(object):
         # data is sorted based on frequency in descending order
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
-    def rank_third_party_cookie_keys(self, amount=15):
+    def rank_third_party_cookie_keys(self, amount=5):
         '''Rank third-party cookie key based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE_NAME)
@@ -197,6 +197,7 @@ class DataEvaluator(object):
                 total_sum += len(matches)
                 data.setdefault(site, []).append((category, len(matches)))
         # calc average number of trackers per page
+        data['total_sum'] = total_sum
         data["tracker_avg"] = total_sum / len(sites_requests.keys())
         return data
 
@@ -248,7 +249,7 @@ class DataEvaluator(object):
                 data[self._get_domain(site)] = matches
         return data
 
-    def rank_third_party_prominence(self, amount=15):
+    def rank_third_party_prominence(self, amount=5):
         '''Ranks third-party domains based on suggested prominence metric
            Approach: A 1-million-site Measurement and Analysis'''
         data = {}
@@ -262,7 +263,7 @@ class DataEvaluator(object):
             data[dom] = reduce(lambda x, y: x + y, [1.0/x for x in ranks])
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    def rank_third_party_domains(self, amount=15):
+    def rank_third_party_domains(self, amount=5):
         '''Rank third-party domains based in crawl data (dascending)
            What domain (resource) is most requested? Based on prevalence'''
         data = {}

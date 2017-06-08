@@ -8,7 +8,9 @@
     <title>Crawl-Evaluation Report</title>
 </head>
 <body>
-    <h4>Summary for Crawl</h4>
+    <h2>Crawl Evaluation Report</h2><br>
+    <h4>Summary</h4>
+
     <!-- Meta Data (num_pages,num_timeouts,rate_timeouts,time)-->
     <table class="table table-bordered">
       <tr>
@@ -26,17 +28,132 @@
         <td>{{rate_timeouts}}</td>
       </tr>
     </table>
-    <p>*<span style="font-weight: bold;">crawltype</span> refers to the configuration of employed browser</p>
+    <p>* refers to the configuration of employed browser</p>
     <p>vanilla(no plugins), ghostery, disconnect, dnt(Do Not Track header), adblock</p>
-    <hr>
+    <hr><br>
+
     <!-- Storage (firstparty_cookies,thirdparty_cookies,flash_cookies,localstorage)-->
-    <hr>
+    <h4>Storage Technology</h4>
+    <table class="table table-bordered">
+      <tr>
+        <th>first-party cookies*</th>
+        <th>third-party cookies*</th>
+        <th>flash**</th>
+        <th>localstorage**</th>
+      </tr>
+      <tr>
+        <td>{{first_cookies}}</td>
+        <td>{{third_cookies}}</td>
+        <td>{{flash_cookies}}</td>
+        <td>{{localstorage}}</td>
+      </tr>
+    </table>
+
     <!-- Storage Ranks (rank_cookie_domains,rank_cookie_keys)-->
-    <hr>
+    <table class="table table-bordered">
+      <tr>
+        <th>top {{cookie_domains|length}} cookie domains</th>
+        <th>top {{cookie_keys|length}} cookie keys</th>
+      </tr>
+      <tr>
+        <td>
+          <ol>
+            {% for domain in cookie_domains %}
+            <li>{{domain[0]}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for key in cookie_keys %}
+            <li>{{key[0]}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+      </tr>
+    </table>
+    <p>* total amount of measured cookies</p>
+    <p>** amount of sites which employed technology</p>
+    <p>ranks are based on simple prevalence</p>
+    <p>note that the usage of said technologies is no hard proof for tracking.</p>
+    <hr><br>
+
     <!-- Http (trackingcontext,loadingtime,cookiesync)-->
-    <hr>
+    <h4>Third-Party Http Traffic</h4>
+    <table class="table table-bordered">
+      <tr>
+        <th>requests</th>
+        <th>avg. requests</th>
+        <th>avg. pageloadtime*</th>
+        <th>trackers**</th>
+        <th>avg. trackers</th>
+        <th>cookie syncing***</th>
+      </tr>
+        <td>{{count_requests}}</td>
+        <td>{{avg_requests}}</td>
+        <td>{{avg_pageload}}</td>
+        <td>{{count_trackers}}</td>
+        <td>{{avg_trackers}}</td>
+        <td>{{count_cookiesync}}</td>
+      <tr>
+      </tr>
+    </table>
+
     <!-- Http Ranks (prominence_rank,simple_rank)-->
-    <hr>
+    <table class="table table-bordered">
+      <tr>
+        <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
+        <th>top {{rank_prominence|length}} requested domains (prominence)</th>
+      </tr>
+      <tr>
+        <td>
+          <ol>
+            {% for domain in rank_prevalence %}
+            <li>{{domain[0]}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for domain in rank_prominence %}
+            <li>{{domain[0]}}, score: {{domain[1]|round(2)}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+      </tr>
+    </table>
+    <p>* timespan initial request to last network activity</p>
+    <p>** third-parties matching disconnects blocking list
+    <p>*** amount pages showing cookie syncing behaviour (leaking uids)</p>
+    <p>domain is classified as third party if it does not match hosts domain</p>
+    <hr><br>
+
     <!-- Fingerprinting (fingerprint_matches,detected_canvas_js,detected_font_js)-->
+    <h4>Active Fingerprinting</h4>
+    <table class="table table-bordered">
+      <tr>
+        <th>sites using scripts*</th>
+        <th>canvas fp scripts</th>
+        <th>font fp scripts</th>
+      </tr>
+      <tr>
+        <td>{{count_fp_scripts}}</td>
+        <td>
+          <ol>
+            {% for url in canvas_scripts %}
+            <li>{{url}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for url in font_scripts %}
+            <li>{{url}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+      </tr>
+    </table>
+    <p>* scripts taken from 1 Million site measurement</p>
 </body>
 </html>
