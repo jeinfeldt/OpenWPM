@@ -60,8 +60,10 @@ def _map_http_data(data):
     context['avg_pageload'] = data['loadingtime']['loadtime_avg']
     context['count_cookiesync'] = data['cookiesync']['total_sum']
     # ranks
-    context['rank_prevalence'] = data['rank_simple']
-    context['rank_prominence'] = data['rank_prominence']
+    if 'rank_simple' in data:
+        context['rank_prevalence'] = data['rank_simple']
+    if 'rank_prominence' in data:
+        context['rank_prominence'] = data['rank_prominence']
     # trackers
     context['count_trackers'] = data['trackingcontext']['total_sum']
     context['avg_trackers'] = data['trackingcontext']['tracker_avg']
@@ -72,5 +74,6 @@ def _map_fingerprinting_data(data):
     context = {}
     context['canvas_scripts'] = data['detected_canvas_js']
     context['font_scripts'] = data['detected_font_js']
-    context['count_fp_scripts'] = data['fingerprint_matches']['total_sum']
+    if 'fingerprint_matches' in data:
+        context['count_fp_scripts'] = data['fingerprint_matches']['total_sum']
     return context

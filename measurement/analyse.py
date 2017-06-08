@@ -32,13 +32,11 @@ def _init_evaluation(eva, db_path):
                          ("trackingcontext", eva.eval_tracking_context), #param
                          ("loadingtime", eva.calc_pageload),
                          ("cookiesync", eva.detect_cookie_syncing),
-                         #("rank_prominence", lambda: ""), #eva.rank_third_party_prominence),
-                         #("rank_simple", lambda: "")#eva.rank_third_party_domains)
-                         ("rank_prominence", eva.rank_third_party_prominence),
-                         ("rank_simple", eva.rank_third_party_domains)
+                         #("rank_prominence", eva.rank_third_party_prominence),
+                         #("rank_simple", eva.rank_third_party_domains)
                          ],
                 "fingerprinting": [
-                                   ("fingerprint_matches", eva.eval_fingerprint_scripts), #param
+                                   #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
                                    ("detected_canvas_js", eva.detect_canvas_fingerprinting),
                                    ("detected_font_js", eva.detect_font_fingerprinting)
                                    ]}
