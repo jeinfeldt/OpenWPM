@@ -36,14 +36,15 @@ def _crawl_detection(sites, browser_params, manager_params):
     '''Runs crawl resulting in dataset for unsupervised tracking detection'''
     num_visits, num_users = manager_params['num_visits'], manager_params['num_users']
     browser_params['disable_flash'] = True
-    for _ in range(0, num_users):
-        manager = TaskManager.TaskManager(manager_params, [browser_params])
-        for site in sites:
-            for _ in range(0, num_visits):
-                command_sequence = CommandSequence.CommandSequence(site)
-                command_sequence.get(sleep=0, timeout=60)
-                manager.execute_command_sequence(command_sequence, index='**')
-        manager.close()
+    # TODO: just for testing
+    manager_params['database_name'] = "05-vanilla-100-detection-crawl-data.sqlite"
+    manager = TaskManager.TaskManager(manager_params, [browser_params])
+    for site in sites:
+        for _ in range(0, num_visits):
+            command_sequence = CommandSequence.CommandSequence(site)
+            command_sequence.get(sleep=0, timeout=60)
+            manager.execute_command_sequence(command_sequence, index='**')
+    manager.close()
 
 def load_websites(file_path, amount):
     '''loads defined amount of pages from file, websites are returned
