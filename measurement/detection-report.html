@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+          crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <title>Detection Crawl Report</title>
+</head>
+<body>
+    <h2>Detection Crawl Report</h2><br>
+    <h4>Summary</h4>
+
+    <!-- Meta Data (num_pages,num_timeouts,rate_timeouts,time)-->
+    <table class="table table-bordered">
+      <tr>
+        <th>sites</th>
+        <th>crawltype*</th>
+        <th>runtime</th>
+        <th>timeouts</th>
+        <th>timeoutrate</th>
+      </tr>
+      <tr>
+        <td>{{num_pages}}</td>
+        <td>vanilla*</td>
+        <td>{{time}}</td>
+        <td>{{num_timeouts}}</td>
+        <td>{{rate_timeouts}}</td>
+      </tr>
+    </table>
+    <p>* refers to the configuration of employed browser</p>
+    <p>vanilla(no plugins), ghostery, disconnect, dnt(Do Not Track header), adblock</p>
+    <hr><br>
+
+    <!-- Http (trackingcontext,loadingtime,cookiesync)-->
+    <h4>Third-Party Http Traffic</h4>
+    <table class="table table-bordered">
+      <tr>
+        <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
+        <th>top {{rank_prominence|length}} requested domains (prominence)</th>
+      </tr>
+      <tr>
+        <td>
+          <ol>
+            {% for domain in rank_prevalence %}
+            <li>{{domain[0]}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for domain in rank_prominence %}
+            <li>{{domain[0]}}, score: {{domain[1]|round(2)}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+      </tr>
+    </table>
+    <p>* timespan initial request to last network activity</p>
+    <p>** third-parties matching disconnects blocking list
+    <p>*** amount pages showing cookie syncing behaviour (leaking uids)</p>
+    <p>domain is classified as third party if it does not match hosts domain</p>
+    <hr><br>
+</body>
+</html>

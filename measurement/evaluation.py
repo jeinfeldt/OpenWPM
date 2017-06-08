@@ -237,6 +237,7 @@ class DataEvaluator(object):
     def detect_trackers(self, min_users=3):
         '''Detects possible user tracking keys based on http request logs per website.
            Approach: Unsupervised Detection of Web Trackers
+           IMPORTANT: Expects datainput in certain format
            minUsers: number of distinct user value pairs to observe'''
         data = {}
         userdata = self._prepare_detection_data()
@@ -245,8 +246,9 @@ class DataEvaluator(object):
         for userdict in userdata:
             for site, visitdata in userdict.items():
                 extracted = [y for x in visitdata for y in x['extracted']]
-                matches = [x[0] for x in pairs if x in extracted]
-                data[self._get_domain(site)] = matches
+                matches = [x for x in pairs if x in extracted]
+                if len(matches) > 0:
+                    data[self._get_domain(site)] = matches
         return data
 
     def rank_third_party_prominence(self, amount=5):
