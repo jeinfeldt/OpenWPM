@@ -14,7 +14,7 @@ HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
 FINGERPRINT_BLACKLIST = "assets/fingerprinting_blacklist.json"
 BLOCKLIST = "assets/disconnect_blocklist.json"
-DETECTEDLIST = "asstes/detected_trackers.json"
+DETECTEDLIST = "assets/detected_trackers.json"
 
 def _init_evaluation(eva):
     '''Creates dict with all evaluation functions and corresponding metric'''
@@ -32,7 +32,7 @@ def _init_evaluation(eva):
                      ("cookiesync", eva.detect_cookie_syncing),
                      #("rank_prominence", eva.rank_third_party_prominence),
                      #("rank_simple", eva.rank_third_party_domains),
-                     #("detected_trackers", eva.discover_new_trackers)
+                     ("detected_trackers", eva.discover_new_trackers) #params
                     ],
             "fingerprinting": [
                 #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
@@ -72,6 +72,8 @@ def evaluate(evaluation_dict):
                 result = func(_load_json(BLOCKLIST))
             elif name == "fingerprint_matches":
                 result = func(_load_json(FINGERPRINT_BLACKLIST))
+            elif name == "detected_trackers":
+                result = func(_load_json(DETECTEDLIST), _load_json(BLOCKLIST))
             else:
                 result = func()
             data[evaltype][name] = result

@@ -104,6 +104,7 @@
       <tr>
         <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
         <th>top {{rank_prominence|length}} requested domains (prominence)</th>
+        <th>detected new trackers</th>
       </tr>
       <tr>
         <td>
@@ -117,6 +118,13 @@
           <ol>
             {% for domain in rank_prominence %}
             <li>{{domain[0]}}, score: {{domain[1]|round(2)}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for domain in new_trackers %}
+            <li>{{domain}}</li>
             {% endfor %}
           </ol>
         </td>

@@ -243,7 +243,7 @@ class DataEvaluator(object):
         userdata = self._prepare_detection_data()
         pairs = self._find_user_tracking_pairs(userdata, min_users)
         # map detected keys to site they occured on
-        for site, visitdata in userdata[0].items():
+        for _, visitdata in userdata[0].items():
             urls = [url for v in visitdata for url in list(v['urls'])]
             # fetch urls which contains marked header value
             key_value = [pair[0]+'='+pair[1] for pair in pairs]
@@ -479,7 +479,9 @@ class DataEvaluator(object):
     def discover_new_trackers(detected, blacklist):
         '''Discovers new trackers by matching detected list of tracking
            domains against given domain list'''
-        pass
+        _ = DataEvaluator._map_category_to_domains(blacklist)
+        blocked = [DataEvaluator._get_domain(x) for l in _.values() for x in l]
+        return [x for x in detected['domains'] if x not in blocked]
 
     def _map_site_to_js(self):
         '''Collects all found javascript scripts and maps them to site they

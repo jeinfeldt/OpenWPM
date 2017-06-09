@@ -65,6 +65,7 @@ def _map_http_data(data):
     if 'rank_prominence' in data:
         context['rank_prominence'] = data['rank_prominence']
     # trackers
+    context['new_trackers'] = data['detected_trackers']
     context['count_trackers'] = data['trackingcontext']['total_sum']
     context['avg_trackers'] = data['trackingcontext']['tracker_avg']
     return context
