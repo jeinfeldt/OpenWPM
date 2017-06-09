@@ -12,40 +12,32 @@ from evaluation import DataEvaluator
 #constants
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to crawl-data (sqlite)\n(2. name for outputfile)'''
-FINGERPRINT_BLACKLIST = "fingerprinting_blacklist.json"
-BLOCKLIST = "disconnect_blocklist.json"
+FINGERPRINT_BLACKLIST = "assets/fingerprinting_blacklist.json"
+BLOCKLIST = "assets/disconnect_blocklist.json"
+DETECTEDLIST = "asstes/detected_trackers.json"
 
-def _init_evaluation(eva, db_path):
+def _init_evaluation(eva):
     '''Creates dict with all evaluation functions and corresponding metric'''
-    data = {}
-    # analysis scripts and detection scripts differ
-    if "analysis" in db_path:
-        data = {"crawl": [("success", eva.eval_crawlsuccess),
-                          ("time", eva.calc_execution_time)],
-                "storage": [("firstparty_cookies", eva.eval_first_party_cookies),
-                            ("thirdparty_cookies", eva.eval_third_party_cookies),
-                            ("flash_cookies", eva.eval_flash_cookies),
-                            ("localstorage", eva.eval_localstorage_usage),
-                            ("rank_cookie_domains", eva.rank_third_party_cookie_domains),
-                            ("rank_cookie_keys", eva.rank_third_party_cookie_keys)],
-                "http": [("requests", eva.eval_requests),
-                         ("trackingcontext", eva.eval_tracking_context), #param
-                         ("loadingtime", eva.calc_pageload),
-                         ("cookiesync", eva.detect_cookie_syncing),
-                         #("rank_prominence", eva.rank_third_party_prominence),
-                         #("rank_simple", eva.rank_third_party_domains)
-                         ],
-                "fingerprinting": [
-                                   #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
-                                   ("detected_canvas_js", eva.detect_canvas_fingerprinting),
-                                   ("detected_font_js", eva.detect_font_fingerprinting)
-                                   ]}
-    else:
-        data = {"crawl":  [("success", eva.eval_crawlsuccess),
-                           ("time", eva.calc_execution_time)],
-                "storage": [],
-                "http": [("detect_trackers", eva.detect_trackers)],
-                "fingerprinting": []}
+    data = {"crawl": [("success", eva.eval_crawlsuccess),
+                      ("time", eva.calc_execution_time)],
+            "storage": [("firstparty_cookies", eva.eval_first_party_cookies),
+                        ("thirdparty_cookies", eva.eval_third_party_cookies),
+                        ("flash_cookies", eva.eval_flash_cookies),
+                        ("localstorage", eva.eval_localstorage_usage),
+                        ("rank_cookie_domains", eva.rank_third_party_cookie_domains),
+                        ("rank_cookie_keys", eva.rank_third_party_cookie_keys)],
+            "http": [("requests", eva.eval_requests),
+                     ("trackingcontext", eva.eval_tracking_context), #param
+                     ("loadingtime", eva.calc_pageload),
+                     ("cookiesync", eva.detect_cookie_syncing),
+                     #("rank_prominence", eva.rank_third_party_prominence),
+                     #("rank_simple", eva.rank_third_party_domains),
+                     #("detected_trackers", eva.discover_new_trackers)
+                    ],
+            "fingerprinting": [
+                #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
+                ("detected_canvas_js", eva.detect_canvas_fingerprinting),
+                ("detected_font_js", eva.detect_font_fingerprinting)]}
     return data
 
 def _load_json(path):
@@ -90,7 +82,7 @@ def _main():
     db_path, output = _init()
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
-    evaluation = _init_evaluation(evaluator, db_path)
+    evaluation = _init_evaluation(evaluator)
     data = evaluate(evaluation)
     if output is not None:
         print "Finished analysis, data written to %s" %(output)

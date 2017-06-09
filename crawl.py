@@ -6,7 +6,7 @@ from time import gmtime, strftime
 from automation import TaskManager, CommandSequence
 
 # constants
-WEBSITE_FILE = 'measurement/quantcast-top-million.txt'
+WEBSITE_FILE = 'measurement/assets/quantcast-top-million.txt'
 HELP = '''Scripts needs to be executed with the following parameters:
 1. path to browser parameter .json-file\n2. path to manager parameter .json-file
 3. number of pages to crawl\nHint: For better results perform script as sudo'''

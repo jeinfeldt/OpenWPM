@@ -8,8 +8,7 @@ import pprint
 import pdfkit
 from jinja2 import Environment, FileSystemLoader
 
-ANALYSIS_TEMPLATE = "analysis-report.html"
-DETECTION_TEMPLATE = "detection-report.html"
+TEMPLATE = "assets/report.html"
 PDF_OPTIONS = {'quiet': ''}
 
 def write_data(data, path):
@@ -17,7 +16,7 @@ def write_data(data, path):
     if path is not None:
         context = _format_data(data)
         env = Environment(loader=FileSystemLoader('.'))
-        temp = env.get_template(ANALYSIS_TEMPLATE)
+        temp = env.get_template(TEMPLATE)
         pdfkit.from_string(temp.render(context), path, options=PDF_OPTIONS)
     else:
         pprinter = pprint.PrettyPrinter(indent=4)

@@ -239,17 +239,18 @@ class DataEvaluator(object):
            Approach: Unsupervised Detection of Web Trackers
            IMPORTANT: Expects datainput in certain format
            minUsers: number of distinct user value pairs to observe'''
-        data = {}
+        data = set()
         userdata = self._prepare_detection_data()
         pairs = self._find_user_tracking_pairs(userdata, min_users)
         # map detected keys to site they occured on
-        for userdict in userdata:
-            for site, visitdata in userdict.items():
-                extracted = [y for x in visitdata for y in x['extracted']]
-                matches = [x for x in pairs if x in extracted]
-                if len(matches) > 0:
-                    data[self._get_domain(site)] = matches
-        return data
+        for site, visitdata in userdata[0].items():
+            urls = [url for v in visitdata for url in list(v['urls'])]
+            # fetch urls which contains marked header value
+            key_value = [pair[0]+'='+pair[1] for pair in pairs]
+            matches = [url for url in urls for pair in key_value if pair in url]
+            if len(matches) > 0:
+                data.update([self._get_domain(x) for x in matches])
+        return list(data)
 
     def rank_third_party_prominence(self, amount=5):
         '''Ranks third-party domains based on suggested prominence metric
@@ -339,11 +340,11 @@ class DataEvaluator(object):
         num_users = len(userdata)
         # find pairs which are stable across visits for a user
         for userdict in userdata:
-            pairs = [y for x in userdict.values()[0] for y in x['extracted']]
+            pairs = [pair for visit in userdict.values()[0] for pair in visit['extracted']]
             matches = set([x for x in pairs if pairs.count(x) == num_visits])
             userpairs.append(list(matches))
         # find pairs which have different values for each user
-        keys = [y[0] for x in userpairs for y in x]
+        keys = [pair[0] for user in userpairs for pair in user]
         check_key = lambda tpl: keys.count(tpl[0]) == num_users # every user has key
         # key should have more distinct values than threshold
         filter_tup = lambda key: [y for x in userpairs for y in x if y[0] == key]
@@ -474,6 +475,12 @@ class DataEvaluator(object):
     #---------------------------------------------------------------------------
     # UTILITIES
     #---------------------------------------------------------------------------
+    @staticmethod
+    def discover_new_trackers(detected, blacklist):
+        '''Discovers new trackers by matching detected list of tracking
+           domains against given domain list'''
+        pass
+
     def _map_site_to_js(self):
         '''Collects all found javascript scripts and maps them to site they
            occured on'''
