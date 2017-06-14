@@ -85,9 +85,9 @@ class DataEvaluator(object):
         '''Evaluates number of successfull commands and timeouts during crawl'''
         data = {}
         data['num_timeouts'] = len(self._eval_failed_sites())
-        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         self.cursor.execute(Queries.NUM_SITES_VISITED)
         data['num_pages'] = self.cursor.fetchone()[0]
+        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         return data
 
     def eval_crawltype(self):
@@ -214,14 +214,16 @@ class DataEvaluator(object):
     def calc_pageload(self):
         '''Calculates pageload (initial request to last network activity time for websites'''
         data = {}
+        failed = self._eval_failed_sites()
         self.cursor.execute(Queries.HTTP_TIMESTAMPS)
         for site, req_timestamp, resp_timestamp in self.cursor.fetchall():
-            data.setdefault(site, []).append((req_timestamp, resp_timestamp))
+            if site not in failed: # do not consider failed pages
+                data.setdefault(site, []).append((req_timestamp, resp_timestamp))
         # analysis of timestamps
         for site, timestamps in data.items():
             min_req = min([x[0] for x in timestamps])
             max_resp = max([x[1] for x in timestamps])
-            # calc time difference
+            # calc time
             data[site] = self._calc_request_timediff(min_req, max_resp)
         avg = reduce(lambda x, y: x + y, data.values()) / len(data.keys())
         data["loadtime_avg"] = str(avg) + "ms"
@@ -427,14 +429,17 @@ class DataEvaluator(object):
         '''Matches found js-scripts against blacklist'''
         data = {}
         site_scripts = self._map_site_to_js() # {site: [script...]}
+        _ = [x for l in blacklist.values() for x in l]
+        fptpl = [(self._get_domain(x), self._get_resource_name(x)) for x in _]
+        # check if ANY of the found scripts occur in blacklist
         for site, scripts in site_scripts.items():
-            # check if ANY of the found scripts occur in blacklist
-            # XXX: Compare netlocation and scriptname?
-            matched = [js for js in scripts if js in blacklist]
+            sitetpl = [(self._get_domain(js), self._get_resource_name(js)) for js in scripts]
+            matched = [tpl for tpl in fptpl if tpl in sitetpl]
             for match in matched:
                 data.setdefault(match, []).append(site)
         # calc total amount of occurence
         unique_sites = set([site for l in data.values() for site in l])
+        data["sites"] = list(unique_sites)
         data["total_sum"] = len(unique_sites)
         return data
 
@@ -540,3 +545,8 @@ class DataEvaluator(object):
         http://www.hdm-stuttgart.com to hdm-stuttgart.com'''
         # remove protocol
         return get_tld(url, fail_silently=True, fix_protocol=True)
+
+    @staticmethod
+    def _get_resource_name(url):
+        '''Get requested resource name from complete url'''
+        return urlparse.urlparse(url).path.split("/")[-1]
