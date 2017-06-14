@@ -61,7 +61,7 @@ class Queries(object):
     ID_COOKIES = '''select site_url, name, value, expiry, creationTime
     from profile_cookies natural join site_visits'''
 
-    GET_TIMEOUTS = '''select count(*)
+    GET_FAILED_SITES = '''select distinct(arguments)
     from CrawlHistory where command="GET" and  bool_success=-1'''
 
     NUM_SITES_VISITED = '''select count(distinct(site_url)) from site_visits'''
@@ -84,11 +84,10 @@ class DataEvaluator(object):
     def eval_crawlsuccess(self):
         '''Evaluates number of successfull commands and timeouts during crawl'''
         data = {}
+        data['num_timeouts'] = len(self._eval_failed_sites())
+        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         self.cursor.execute(Queries.NUM_SITES_VISITED)
         data['num_pages'] = self.cursor.fetchone()[0]
-        self.cursor.execute(Queries.GET_TIMEOUTS)
-        data['num_timeouts'] = self.cursor.fetchone()[0]
-        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         return data
 
     def eval_crawltype(self):
@@ -107,6 +106,11 @@ class DataEvaluator(object):
         strc_diff = time.gmtime(time.mktime(max_strc) - time.mktime(min_strc))
         # see doc of time_struct for index information
         return data %(strc_diff[2]-1, strc_diff[3], strc_diff[4], strc_diff[5])
+
+    def _eval_failed_sites(self):
+        '''Evaluate which sites caused timeout or failed crawling'''
+        self.cursor.execute(Queries.GET_FAILED_SITES)
+        return [x[0] for x in self.cursor.fetchall()]
 
     #---------------------------------------------------------------------------
     # STORAGE ANALYSIS
