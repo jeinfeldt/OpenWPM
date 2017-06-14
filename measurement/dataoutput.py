@@ -9,7 +9,8 @@ import pdfkit
 from jinja2 import Environment, FileSystemLoader
 
 TEMPLATE = "assets/report.html"
-PDF_OPTIONS = {'quiet': ''}
+PDF_OPTIONS = {'quiet': '', 'margin-top': '0.75in', 'margin-right': '0.75in',
+               'margin-bottom': '0.75in', 'margin-left': '0.75in',}
 
 def write_data(data, path):
     '''Writes all formatted results either to file or console'''

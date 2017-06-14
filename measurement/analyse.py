@@ -87,11 +87,12 @@ def _main():
     evaluation = _init_evaluation(evaluator)
     data = evaluate(evaluation)
     if output is not None:
-        print "Finished analysis, data written to %s" %(output)
+        print "Finished analysis, writing data to %s" %(output)
     else:
         print "Finished analysis, here is the data:"
     dataoutput.write_data(data, output)
     evaluator.close()
+    print "All done!"
 
 #main
 if __name__ == "__main__":
