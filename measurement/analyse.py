@@ -19,7 +19,8 @@ DETECTEDLIST = "assets/detected_trackers.json"
 def _init_evaluation(eva):
     '''Creates dict with all evaluation functions and corresponding metric'''
     data = {"crawl": [("success", eva.eval_crawlsuccess),
-                      ("time", eva.calc_execution_time)],
+                      ("time", eva.calc_execution_time),
+                      ("type", eva.eval_crawltype)],
             "storage": [("firstparty_cookies", eva.eval_first_party_cookies),
                         ("thirdparty_cookies", eva.eval_third_party_cookies),
                         ("flash_cookies", eva.eval_flash_cookies),

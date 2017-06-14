@@ -39,6 +39,7 @@ def _map_crawl_data(data):
     context['time'] = data['time']
     context['num_timeouts'] = data['success']['num_timeouts']
     context['rate_timeouts'] = data['success']['rate_timeouts']
+    context['crawl_type'] = data['type']
     return context
 
 def _map_storage_data(data):

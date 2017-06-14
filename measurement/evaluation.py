@@ -4,6 +4,7 @@ import operator
 import datetime
 import time
 import urlparse
+import os
 from tld import get_tld
 
 class Queries(object):
@@ -66,7 +67,7 @@ class Queries(object):
     NUM_SITES_VISITED = '''select count(distinct(site_url)) from site_visits'''
 
 class DataEvaluator(object):
-    '''Encapsulates all evaluation regarding the crawl-data from measuremnt'''
+    '''Encapsulates all evaluation regarding the crawl-data from measurement'''
 
     def __init__(self, db_path):
         self.db_path = db_path
@@ -89,6 +90,11 @@ class DataEvaluator(object):
         data['num_timeouts'] = self.cursor.fetchone()[0]
         data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         return data
+
+    def eval_crawltype(self):
+        '''Evalautes the type of crawl that was performed based on db names
+           (vanilla, ghostery, disconnect, adblock)'''
+        return os.path.basename(self.db_path).split("-")[0]
 
     def calc_execution_time(self):
         '''Calculates the execution time of the crawl as a formatted string'''
