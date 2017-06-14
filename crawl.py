@@ -23,12 +23,13 @@ def _crawl_analysis(sites, browser_params, manager_params):
     '''Runs a crawl to measure various metrics regarding third-party tracking'''
     manager = TaskManager.TaskManager(manager_params, [browser_params])
     for site in sites:
-        command_sequence = CommandSequence.CommandSequence(site)
+        # we run a stateless crawl (fresh profile for each page)
+        command_sequence = CommandSequence.CommandSequence(site, reset=True)
         # Start by visiting the page
-        command_sequence.get(sleep=0, timeout=60)
+        command_sequence.get(sleep=15, timeout=60)
         # dump_profile_cookies/dump_flash_cookies closes the current tab.
-        command_sequence.dump_profile_cookies(60)
-        command_sequence.dump_flash_cookies(60)
+        command_sequence.dump_profile_cookies(120)
+        command_sequence.dump_flash_cookies(120)
         manager.execute_command_sequence(command_sequence, index='**')
     manager.close()
 
@@ -42,7 +43,7 @@ def _crawl_detection(sites, browser_params, manager_params):
     for site in sites:
         for _ in range(0, num_visits):
             command_sequence = CommandSequence.CommandSequence(site)
-            command_sequence.get(sleep=0, timeout=60)
+            command_sequence.get(sleep=30, timeout=60)
             manager.execute_command_sequence(command_sequence, index='**')
     manager.close()
 
