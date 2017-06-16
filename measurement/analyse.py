@@ -86,9 +86,7 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    #data = evaluate(evaluation)
-    data = evaluator.eval_fingerprint_scripts(_load_json(FINGERPRINT_BLACKLIST))
-    #data = evaluator._get_resource_name('http://cdn.doubleverify.com/hape/dvtp_src_internal24.js')
+    data = evaluate(evaluation)
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:

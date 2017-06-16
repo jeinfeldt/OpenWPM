@@ -125,7 +125,7 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
-    #TODO: Needs further investment (larger cawl scale) if usable
+    #TODO: Needs further investment (larger cawl scale) if usable, maybe html5 video?
     def eval_flash_cookies(self):
         '''Evaluates which sites make use of flash cookies'''
         data = {}
@@ -260,8 +260,8 @@ class DataEvaluator(object):
             # fetch urls which contains marked header value
             key_value = [pair[0]+'='+pair[1] for pair in pairs]
             matches = [url for url in urls for pair in key_value if pair in url]
-            if len(matches) > 0:
-                data.update([self._get_domain(x) for x in matches])
+            for match in matches:
+                data.add(self._get_subdomain(match) + "." + self._get_domain(match))
         return list(data)
 
     def rank_third_party_prominence(self, amount=5):
@@ -424,7 +424,6 @@ class DataEvaluator(object):
     #---------------------------------------------------------------------------
     # FINGERPRINTING ANALYSIS
     #---------------------------------------------------------------------------
-    #TODO: Needs further investment (larger cawl scale) if usable. idea: script name only
     def eval_fingerprint_scripts(self, blacklist):
         '''Matches found js-scripts against blacklist'''
         data = {}
@@ -547,6 +546,13 @@ class DataEvaluator(object):
         return get_tld(url, fail_silently=True, fix_protocol=True)
 
     @staticmethod
+    def _get_subdomain(url):
+        '''Get a main domain with a subdomain'''
+        res = get_tld(url, fail_silently=True, fix_protocol=True, as_object=True)
+        return res.subdomain.lstrip("www.")
+
+    @staticmethod
     def _get_resource_name(url):
-        '''Get requested resource name from complete url'''
+        '''Get requested resource name from complete url e.g.
+           http://www.example.com/js/peter/script.js yields script.js'''
         return urlparse.urlparse(url).path.split("/")[-1]

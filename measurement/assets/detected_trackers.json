@@ -1,11 +1,12 @@
 {
   "domains": [
-           "yahoo.com",
-           "doubleclick.net",
-           "google.com",
-           "ru4.com",
-           "google.de",
-           "google-analytics.com",
-           "criteo.com"
-  ]
+    "google.de",
+    "google-analytics.com",
+    "securepubads.g.doubleclick.net",
+    "stats.g.doubleclick.net",
+    "d.xp1.ru4.com",
+    "cm.g.doubleclick.net",
+    "google.com",
+    "beap-bc.yahoo.com",
+    "dis.us.criteo.com"]
 }
