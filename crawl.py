@@ -63,7 +63,7 @@ def load_parameters(file_path):
 def generate_crawl_prefix(browser_params_path, manager_params, amount):
     '''adjusts parameters for manager suitable for measurement'''
     tmp = '%s-%s-%s-%s-'
-    timestamp = strftime("%d%m%y-%H:%M", gmtime())
+    timestamp = strftime("%Y%m%d-%H:%M", gmtime())
     prefix = os.path.basename(browser_params_path).split('_')[0]
     return tmp %(timestamp, prefix, str(amount), manager_params['crawl_type'])
 

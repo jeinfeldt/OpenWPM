@@ -84,6 +84,7 @@
         <th>requests</th>
         <th>avg. requests</th>
         <th>avg. pageloadtime*</th>
+        <th>avg. bytes****</th>
         <th>trackers**</th>
         <th>avg. trackers</th>
         <th>cookie syncing***</th>
@@ -91,6 +92,7 @@
         <td>{{count_requests}}</td>
         <td>{{avg_requests}}</td>
         <td>{{avg_pageload}}</td>
+        <td>{{avg_resp_bytes}}</td>
         <td>{{count_trackers}}</td>
         <td>{{avg_trackers}}</td>
         <td>{{count_cookiesync}}</td>
@@ -132,6 +134,7 @@
     <p>* timespan initial request to last network activity</p>
     <p>** third-parties matching disconnects blocking list
     <p>*** amount pages showing cookie syncing behaviour (leaking uids)</p>
+    <p>**** sum of content-length response header</p>
     <p>domain is classified as third party if it does not match hosts domain</p>
     <hr><br>
 

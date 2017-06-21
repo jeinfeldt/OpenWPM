@@ -28,6 +28,7 @@ def _init_evaluation(eva):
                         ("rank_cookie_domains", eva.rank_third_party_cookie_domains),
                         ("rank_cookie_keys", eva.rank_third_party_cookie_keys)],
             "http": [("requests", eva.eval_requests),
+                     ("response_traffic", eva.eval_response_traffic),
                      ("trackingcontext", eva.eval_tracking_context), #param
                      ("loadingtime", eva.calc_pageload),
                      ("cookiesync", eva.detect_cookie_syncing),
@@ -86,8 +87,7 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    #data = evaluate(evaluation)
-    data = evaluator.eval_response_traffic()
+    data = evaluate(evaluation)
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:

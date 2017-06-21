@@ -61,6 +61,7 @@ def _map_http_data(data):
     context['avg_requests'] = data['requests']['request_avg']
     context['avg_pageload'] = data['loadingtime']['loadtime_avg']
     context['count_cookiesync'] = data['cookiesync']['total_sum']
+    context['avg_resp_bytes'] = data['response_traffic']['byte_avg']
     # ranks
     if 'rank_simple' in data:
         context['rank_prevalence'] = data['rank_simple']

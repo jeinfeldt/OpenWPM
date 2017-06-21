@@ -70,6 +70,9 @@ class Queries(object):
     RESPONSE_HEADERS = '''select method, headers from http_responses
     where headers like \"%%content-length%%\"'''
 
+    SITES_RESPONSES = '''select site_url, url, headers
+    from site_visits natural join http_responses'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measurement'''
 
@@ -204,15 +207,19 @@ class DataEvaluator(object):
     def eval_response_traffic(self):
         '''Evaluates amount of received bytes based on content length
         field in response headers'''
-        data, cbytes = {}, 0
-        self.cursor.execute(Queries.RESPONSE_HEADERS)
-        for _, headers in self.cursor.fetchall():
-            headers = ast.literal_eval(headers)
-            clength = [field[1] for field in headers if field[0] == "Content-Length"]
-            if len(clength) == 1:
-                cbytes += int(clength[0])
-        data['total_sum'] = str(cbytes) + "bytes"
-        data['byte_avg'] = str(cbytes / self._eval_visited_sites()) + "bytes"
+        data = {}
+        sites_responses = self._map_site_to_responses()
+        for site, responses in sites_responses.items():
+            headers = [ast.literal_eval(tup[1]) for tup in responses]
+            fields = [y for x in headers for y in x if y[0] == "Content-Length"]
+            clengths = [x[1] for x in fields if len(x) == 2 and x[1].isdigit()]
+            data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
+        # calc total sum and average
+        data['total_sum'] = reduce(lambda x, y: int(x) + int(y), data.values())
+        data['byte_avg'] = data['total_sum'] / len(sites_responses.keys())
+        # convert to kB
+        data['total_sum'] = str(data['total_sum']/1000) + "kB"
+        data['byte_avg'] = str(data['byte_avg']/1000) + "kB"
         return data
 
     def eval_tracking_context(self, blocklist):
@@ -553,12 +560,22 @@ class DataEvaluator(object):
         return data
 
     def _map_site_to_requests(self):
-        '''Maps sites to their requested (http GET) third-party resources'''
+        '''Maps sites to transmitted third-party requests'''
         data = {}
         self.cursor.execute(Queries.SITE_THIRD_PARTY_REQUESTS)
         for site_url, url, method, referrer, headers in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             data.setdefault(top_domain, []).append((url, method, referrer, headers))
+        return data
+
+    def _map_site_to_responses(self):
+        '''Maps sites to received thiry-party responses'''
+        data = {}
+        self.cursor.execute(Queries.SITES_RESPONSES)
+        for site_url, url, headers in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            if top_domain != self._get_domain(url): # third party criteria
+                data.setdefault(top_domain, []).append((url, headers))
         return data
 
     @staticmethod
