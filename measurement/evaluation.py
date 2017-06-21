@@ -99,7 +99,7 @@ class DataEvaluator(object):
     def eval_crawltype(self):
         '''Evalautes the type of crawl that was performed based on db names
            (vanilla, ghostery, disconnect, adblock)'''
-        return os.path.basename(self.db_path).split("-")[0]
+        return os.path.basename(self.db_path).split("-")[2]
 
     def calc_execution_time(self):
         '''Calculates the execution time of the crawl as a formatted string'''
