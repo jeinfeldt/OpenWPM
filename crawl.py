@@ -52,6 +52,7 @@ def load_websites(file_path, amount):
     with open(file_path, 'r') as data:
         sites = [line.strip() for line in data if "#" not in line]
         sites = [url_format %(line) for line in sites if line] # remove blank
+        amount = -1 if amount >= len(sites) else amount
         return sites[:amount]
 
 def load_parameters(file_path):
