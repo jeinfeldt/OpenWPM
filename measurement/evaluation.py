@@ -5,6 +5,7 @@ import datetime
 import time
 import urlparse
 import os
+import ast
 from tld import get_tld
 
 class Queries(object):
@@ -66,6 +67,9 @@ class Queries(object):
 
     NUM_SITES_VISITED = '''select count(distinct(site_url)) from site_visits'''
 
+    RESPONSE_HEADERS = '''select method, headers from http_responses
+    where headers like \"%%content-length%%\"'''
+
 class DataEvaluator(object):
     '''Encapsulates all evaluation regarding the crawl-data from measurement'''
 
@@ -85,8 +89,7 @@ class DataEvaluator(object):
         '''Evaluates number of successfull commands and timeouts during crawl'''
         data = {}
         data['num_timeouts'] = len(self._eval_failed_sites())
-        self.cursor.execute(Queries.NUM_SITES_VISITED)
-        data['num_pages'] = self.cursor.fetchone()[0]
+        data['num_pages'] = self._eval_visited_sites()
         data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
         return data
 
@@ -111,6 +114,12 @@ class DataEvaluator(object):
         '''Evaluate which sites caused timeout or failed crawling'''
         self.cursor.execute(Queries.GET_FAILED_SITES)
         return [x[0] for x in self.cursor.fetchall()]
+
+    def _eval_visited_sites(self):
+        '''Evaluates how many sites have been visited, successfull
+        or unsuccessfull'''
+        self.cursor.execute(Queries.NUM_SITES_VISITED)
+        return self.cursor.fetchone()[0]
 
     #---------------------------------------------------------------------------
     # STORAGE ANALYSIS
@@ -190,6 +199,20 @@ class DataEvaluator(object):
         num_requests = [len(x) for x in sites_requests.values()]
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
         data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
+        return data
+
+    def eval_response_traffic(self):
+        '''Evaluates amount of received bytes based on content length
+        field in response headers'''
+        data, cbytes = {}, 0
+        self.cursor.execute(Queries.RESPONSE_HEADERS)
+        for _, headers in self.cursor.fetchall():
+            headers = ast.literal_eval(headers)
+            clength = [field[1] for field in headers if field[0] == "Content-Length"]
+            if len(clength) == 1:
+                cbytes += int(clength[0])
+        data['total_sum'] = str(cbytes) + "bytes"
+        data['byte_avg'] = str(cbytes / self._eval_visited_sites()) + "bytes"
         return data
 
     def eval_tracking_context(self, blocklist):
