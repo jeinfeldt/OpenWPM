@@ -213,7 +213,8 @@ class DataEvaluator(object):
             headers = [ast.literal_eval(tup[1]) for tup in responses]
             fields = [y for x in headers for y in x if y[0] == "Content-Length"]
             clengths = [x[1] for x in fields if len(x) == 2 and x[1].isdigit()]
-            data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
+            if len(clengths) > 0:
+                data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
         # calc total sum and average
         data['total_sum'] = reduce(lambda x, y: int(x) + int(y), data.values())
         data['byte_avg'] = data['total_sum'] / len(sites_responses.keys())
@@ -243,7 +244,7 @@ class DataEvaluator(object):
         return data
 
     def calc_pageload(self):
-        '''Calculates pageload (initial request to last network activity time for websites'''
+        '''Calculates pageload (initial request to last response time for websites'''
         data = {}
         failed = self._eval_failed_sites()
         self.cursor.execute(Queries.HTTP_TIMESTAMPS)
