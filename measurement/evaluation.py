@@ -224,21 +224,22 @@ class DataEvaluator(object):
 
     def eval_tracking_context(self, blocklist):
         '''Classifiyes third partys as trackers based on given blocking list (json)
-           data{site: {category: num_tracking_context}, avg: num_tracking_context}'''
-        data = {}
-        total_sum = 0
+        maps sites to amount of domains (NOT resources) that would have been blocked'''
+        data, uniquedoms = {}, set()
         categorie_domains = self._map_category_to_domains(blocklist)
         sites_requests = self._map_site_to_requests()
-        #categories: content, analytics, disconnect, advertising, social
+        blocked = [domain for l in categorie_domains.values() for domain in l]
+        # check all blocked domains that occur in site request urls
         for site, requests in sites_requests.items():
-            req_domains = [x[0] for x in requests]
-            for category, domains in categorie_domains.items():
-                matches = [x for x in domains if x in "".join(req_domains)]
-                total_sum += len(matches)
-                data.setdefault(site, []).append((category, len(matches)))
-        # calc average number of trackers per page
-        data['total_sum'] = total_sum
-        data["tracker_avg"] = total_sum / len(sites_requests.keys())
+            requrls = [tup[0] for tup in requests]
+            matches = [dom for dom in blocked if dom in "".join(requrls)]
+            if len(matches) > 0:
+                data[site] = len(matches)
+                uniquedoms.update(matches)
+        # calc total sum, unique trackers and avg per site
+        data["total_sum"] = reduce(lambda x, y: x + y, data.values())
+        data["unique_trackers"] = list(uniquedoms)
+        data["tracker_avg"] = data["total_sum"] / len(sites_requests.keys())
         return data
 
     def calc_pageload(self):
