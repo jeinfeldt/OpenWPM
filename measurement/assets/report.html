@@ -14,7 +14,7 @@
     <table class="table table-bordered">
       <tr>
         <th>sites</th>
-        <th>crawltype*</th>
+        <th>crawltype</th>
         <th>runtime</th>
         <th>timeouts</th>
         <th>timeoutrate</th>
@@ -27,18 +27,19 @@
         <td>{{rate_timeouts}}</td>
       </tr>
     </table>
-    <p>* refers to the configuration of employed browser</p>
-    <p>vanilla(no plugins), ghostery, disconnect, dnt(Do Not Track header), adblock</p>
+    <p><span style="font-weight: bold">Note:</span>
+      Crawlstyle refers to configured firefox browser - vanilla(no plugins), ghostery, disconnect, dnt(Do Not Track header), adblock
+    </p>
     <hr><br>
 
     <!-- Storage (firstparty_cookies,thirdparty_cookies,flash_cookies,localstorage)-->
     <h4>Storage Technology</h4>
     <table class="table table-bordered">
       <tr>
-        <th>first-party cookies*</th>
-        <th>third-party cookies*</th>
-        <th>flash**</th>
-        <th>localstorage**</th>
+        <th>first-party cookies</th>
+        <th>third-party cookies</th>
+        <th>flash</th>
+        <th>localstorage</th>
       </tr>
       <tr>
         <td>{{first_cookies}}</td>
@@ -71,10 +72,11 @@
         </td>
       </tr>
     </table>
-    <p>* total amount of measured cookies</p>
-    <p>** amount of sites which employed technology</p>
-    <p>ranks are based on simple prevalence</p>
-    <p>note that the usage of said technologies is no hard proof for tracking.</p>
+    <p><span style="font-weight: bold">Note:</span>
+      Cookie measurements refer to total amount across all sites.
+      Flash and localstorage refer to total pages employing technology.
+      Note that the usage of displayed technologies is no hard evidence for tracking.
+    </p>
     <hr><br>
 
     <!-- Http (trackingcontext,loadingtime,cookiesync)-->
@@ -83,11 +85,12 @@
       <tr>
         <th>requests</th>
         <th>avg. requests</th>
-        <th>avg. pageloadtime*</th>
-        <th>avg. bytes****</th>
-        <th>trackers**</th>
+        <th>avg. pageloadtime</th>
+        <th>avg. bytes</th>
+        <th>trackers</th>
         <th>avg. trackers</th>
-        <th>cookie syncing***</th>
+        <th>unique blocked domains</th>
+        <th>cookie syncing</th>
       </tr>
         <td>{{count_requests}}</td>
         <td>{{avg_requests}}</td>
@@ -95,6 +98,7 @@
         <td>{{avg_resp_bytes}}</td>
         <td>{{count_trackers}}</td>
         <td>{{avg_trackers}}</td>
+        <td>{{count_unique}}</td>
         <td>{{count_cookiesync}}</td>
       <tr>
       </tr>
@@ -131,18 +135,21 @@
         </td>
       </tr>
     </table>
-    <p>* timespan initial request to last network activity</p>
-    <p>** third-parties matching disconnects blocking list
-    <p>*** amount pages showing cookie syncing behaviour (leaking uids)</p>
-    <p>**** sum of content-length response header</p>
-    <p>domain is classified as third party if it does not match hosts domain</p>
+    <p><span style="font-weight: bold">Note:</span>
+      A domain is classified as third party if it does not match a hosts
+      first level domain.
+      Pageload time refers to timespan between initial request and last response.
+      Trackers are classified as third-party domains matching Disconnects blocking list.
+      Cookiesyning refers to total amount of pages showing said behaviour.
+      Traffic is calculated based on content-length response header.
+    </p>
     <hr><br>
 
     <!-- Fingerprinting (fingerprint_matches,detected_canvas_js,detected_font_js)-->
     <h4>Active Fingerprinting</h4>
     <table class="table table-bordered">
       <tr>
-        <th>sites using scripts*</th>
+        <th>sites using scripts</th>
         <th>canvas fp scripts</th>
         <th>font fp scripts</th>
       </tr>
@@ -164,6 +171,8 @@
         </td>
       </tr>
     </table>
-    <p>* scripts taken from 1 Million site measurement</p>
+    <p><span style="font-weight: bold">Note:</span>
+      Scripts are matched based on findings in 1 Million Sites Measurement
+    </p>
 </body>
 </html>

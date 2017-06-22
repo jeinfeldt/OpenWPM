@@ -71,6 +71,7 @@ def _map_http_data(data):
     context['new_trackers'] = data['detected_trackers']
     context['count_trackers'] = data['trackingcontext']['total_sum']
     context['avg_trackers'] = data['trackingcontext']['tracker_avg']
+    context['count_unique'] = len(data['trackingcontext']['unique_trackers'])
     return context
 
 def _map_fingerprinting_data(data):
