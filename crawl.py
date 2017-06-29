@@ -54,7 +54,7 @@ def load_websites(file_path, amount, startindex):
     with open(file_path, 'r') as data:
         sites = [line.strip() for line in data if "#" not in line]
         sites = [url_format %(line) for line in sites if line] # remove blank
-        startindex = startindex - 1 
+        startindex = startindex - 1
         endindex = startindex + amount
         endindex = -1 if endindex >= len(sites) else endindex
         return sites[startindex:endindex]
@@ -95,8 +95,7 @@ def _main():
     manager_params['log_file'] = prefix + manager_params['log_file']
     websites = load_websites(sites_path, int(amount), int(index))
     print 'Crawling...'
-    #crawl(websites, browser_params, manager_params)
-    print websites
+    crawl(websites, browser_params, manager_params)
     print 'Finished crawling, data written to: %s' %(manager_params['database_name'])
 
 #main
