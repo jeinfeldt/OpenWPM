@@ -8,8 +8,10 @@ from automation import TaskManager, CommandSequence
 # constants
 HELP = '''\nScripts needs to be executed with the following parameters:
 1. path to browser parameter .json-file\n2. path to manager parameter .json-file
-3. number of pages to crawl\n4. site input file (alexa list)
-(5. Prefix of output db)\nHint: For better results perform script as sudo\n'''
+3. site input file (alexa list)\n4. Startindex in file
+5. Number of pages to crawl
+(6. Prefix of output db)
+Hint: For better results perform script as sudo\n'''
 
 def crawl(sites, browser_params, manager_params):
     '''crawls given sites with given parameters'''
@@ -45,15 +47,17 @@ def _crawl_detection(sites, browser_params, manager_params):
                 manager.execute_command_sequence(command_sequence, index='**')
         manager.close()
 
-def load_websites(file_path, amount):
+def load_websites(file_path, amount, startindex):
     '''loads defined amount of pages from alexa file, websites are returned
        in format http://www.[domainname].[identifier]'''
     url_format = 'http://www.%s'
     with open(file_path, 'r') as data:
         sites = [line.strip() for line in data if "#" not in line]
         sites = [url_format %(line) for line in sites if line] # remove blank
-        amount = -1 if amount >= len(sites) else amount
-        return sites[:amount]
+        startindex = startindex - 1 
+        endindex = startindex + amount
+        endindex = -1 if endindex >= len(sites) else endindex
+        return sites[startindex:endindex]
 
 def load_parameters(file_path):
     '''loads crawl parameters from .json file'''
@@ -70,16 +74,16 @@ def generate_crawl_prefix(browser_params_path, manager_params, amount):
 def _init():
     '''guard clause and init for script'''
     args = sys.argv[1:]
-    if len(args) < 4:
+    if len(args) < 5:
         print HELP
         sys.exit()
-    if len(args) == 4:
+    if len(args) == 5:
         args.append(None)
     return args
 
 def _main():
     '''wrapper for main functionality'''
-    browser_path, manager_path, amount, sites_path, db_prefix = _init()
+    browser_path, manager_path, sites_path, index, amount, db_prefix = _init()
     # perform crawl
     print 'Preparing crawl...'
     browser_params = load_parameters(browser_path)
@@ -89,9 +93,10 @@ def _main():
     prefix = db_prefix if db_prefix is not None else generated
     manager_params['database_name'] = prefix + manager_params['database_name']
     manager_params['log_file'] = prefix + manager_params['log_file']
-    websites = load_websites(sites_path, int(amount))
+    websites = load_websites(sites_path, int(amount), int(index))
     print 'Crawling...'
-    crawl(websites, browser_params, manager_params)
+    #crawl(websites, browser_params, manager_params)
+    print websites
     print 'Finished crawling, data written to: %s' %(manager_params['database_name'])
 
 #main
