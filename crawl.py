@@ -57,7 +57,7 @@ def load_websites(file_path, amount, startindex):
         startindex = startindex - 1
         endindex = startindex + amount
         endindex = -1 if endindex >= len(sites) else endindex
-        return sites[startindex:endindex]
+        return [x.lower() for x in sites[startindex:endindex]]
 
 def load_parameters(file_path):
     '''loads crawl parameters from .json file'''
