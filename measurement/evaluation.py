@@ -316,12 +316,32 @@ class DataEvaluator(object):
         data = {}
         site_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
+        items = site_requests.items()
         for domain in domains:
             # fetch sites which request domain
-            items = site_requests.items()
             sites = [site for site, reqs in items if self._is_domain_present(domain, reqs)]
             data[domain] = len(sites)
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
+
+    def rank_organisation_reach(self, disconnect_dict):
+        '''Ranks the reach of an organisation based on the disconnect blocking
+           list which contains organisations with their associated domains
+           Approach: Tracking the Trackers'''
+        data = {}
+        org_domains = self._map_org_to_domains(disconnect_dict)
+        org_orgurl = self._map_org_to_orgurl(disconnect_dict)
+        site_requests = self._map_site_to_requests()
+        # filter only orgnames present in crawl
+        items = org_orgurl.items()
+        orgnames = [org for org, url in items if self._get_domain(url) in site_requests.keys()]
+        # check for any associated domains in requests
+        items = site_requests.items()
+        for orgname in orgnames:
+            amount = set()
+            for domain in org_domains[orgname]:
+                amount.update([site for site, reqs in items if self._is_domain_present(domain, reqs)])
+            data[orgname] = len(amount)
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:5]
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers
@@ -405,9 +425,29 @@ class DataEvaluator(object):
             #entry [{org: {maindomain: [domain, ...]}]
             domains = set()
             for entry in entries:
-                for _, orgdomain in entry.items():
-                    domains.update(orgdomain.values()[0])
+                for _, orgurl in entry.items():
+                    domains.update(orgurl.values()[0])
             data[category] = list(domains)
+        return data
+
+    @staticmethod
+    def _map_org_to_orgurl(disconnect_dict):
+        '''Maps all categories flat to their domains'''
+        data = {}
+        for entries in disconnect_dict['categories'].values():
+            for entry in entries:
+                for orgname, orgurl in entry.items():
+                    data[orgname] = orgurl.keys()[0]
+        return data
+
+    @staticmethod
+    def _map_org_to_domains(disconnect_dict):
+        '''Maps all organisations flat to the associated domains'''
+        data = {}
+        for entries in disconnect_dict['categories'].values():
+            for entry in entries:
+                for orgname, orgurl in entry.items():
+                    data[orgname] = orgurl.values()[0]
         return data
 
     @staticmethod

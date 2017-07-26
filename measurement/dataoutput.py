@@ -67,8 +67,11 @@ def _map_http_data(data):
         context['rank_prevalence'] = data['rank_simple']
     if 'rank_prominence' in data:
         context['rank_prominence'] = data['rank_prominence']
+    if 'rank_org' in data:
+        context['rank_org'] = data['rank_org']
     # trackers
-    context['new_trackers'] = data['detected_trackers']
+    if 'new_trackers' in data:
+        context['new_trackers'] = data['detected_trackers']
     context['count_trackers'] = data['trackingcontext']['total_sum']
     context['avg_trackers'] = data['trackingcontext']['tracker_avg']
     context['count_unique'] = len(data['trackingcontext']['unique_trackers'])

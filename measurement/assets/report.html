@@ -109,6 +109,7 @@
       <tr>
         <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
         <th>top {{rank_prominence|length}} requested domains (prominence)</th>
+        <th>top {{rank_org|length}} requested organisations</th>
         <th>detected new trackers</th>
       </tr>
       <tr>
@@ -128,6 +129,13 @@
         </td>
         <td>
           <ol>
+            {% for org, sites in rank_org %}
+            <li>{{org}}, sites: {{sites}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
             {% for domain in new_trackers %}
             <li>{{domain}}</li>
             {% endfor %}
@@ -142,6 +150,7 @@
       Trackers are classified as third-party domains matching Disconnects blocking list.
       Cookiesyning refers to total amount of pages showing said behaviour.
       Traffic is calculated based on content-length response header.
+      Organisation association of domains is based on Disconnects blocking list.
     </p>
     <hr><br>
 
