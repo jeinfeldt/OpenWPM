@@ -21,3 +21,7 @@ mitmproxy==0.13
 selenium==2.53.0
 mmh3
 IPython
+
+#custom
+jinja2
+pdfkit
