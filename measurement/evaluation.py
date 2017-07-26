@@ -93,7 +93,8 @@ class DataEvaluator(object):
         data = {}
         data['num_timeouts'] = len(self._eval_failed_sites())
         data['num_pages'] = self._eval_visited_sites()
-        data['rate_timeouts'] = float(data['num_timeouts']) / data['num_pages']
+        rate = (float(data['num_timeouts']) / float(data['num_pages'])) * 100.0
+        data['rate_timeouts'] = rate
         return data
 
     def eval_crawltype(self):

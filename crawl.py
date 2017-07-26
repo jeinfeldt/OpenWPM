@@ -1,7 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 '''Starts crawls executing defined workload for measurement'''
-import sys, json, os
+import sys
+import json
+import os
 from time import gmtime, strftime
 from automation import TaskManager, CommandSequence
 
