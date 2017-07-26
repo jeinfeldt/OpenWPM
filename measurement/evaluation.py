@@ -138,7 +138,6 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
-    #TODO: Needs further investment (larger cawl scale) if usable, maybe html5 video?
     def eval_flash_cookies(self):
         '''Evaluates which sites make use of flash cookies'''
         data = {}

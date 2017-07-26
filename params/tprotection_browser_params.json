@@ -21,8 +21,8 @@
     "https-everywhere": false,
     "adblock-plus": false,
     "disconnect": false,
-    "privacy-badger": true,
-    "tracking-protection": false,
+    "privacy-badger": false,
+    "tracking-protection": true,
 
     "proxy": false,
     "save_javascript_proxy": false
