@@ -34,8 +34,8 @@ def _init_evaluation(eva):
                      ("cookiesync", eva.detect_cookie_syncing),
                      #("rank_prominence", eva.rank_third_party_prominence),
                      #("rank_simple", eva.rank_third_party_domains),
-                     ("rank_org", eva.rank_organisation_reach),
-                     ("detected_trackers", eva.discover_new_trackers) #params
+                     #("rank_org", eva.rank_organisation_reach),
+                     #("detected_trackers", eva.discover_new_trackers) #params
                     ],
             "fingerprinting": [
                 #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
@@ -89,7 +89,6 @@ def _main():
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
     data = evaluate(evaluation)
-    #data = evaluator.rank_organisation_reach(_load_json(BLOCKLIST))
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:
