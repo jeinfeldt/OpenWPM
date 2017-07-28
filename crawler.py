@@ -9,16 +9,11 @@ from automation import TaskManager, CommandSequence
 class DataCrawler(object):
     '''High level class encapsulating crawling util functions'''
 
-    def __init__(self, browser_param_path, manager_param_path, site_input, db_prefix=None):
+    def __init__(self, browser_param_path, manager_param_path, site_input):
         # read parameters
         self.browserpar = self._load_parameters(browser_param_path)
         self.managerpar = self._load_parameters(manager_param_path)
         self.sites = self.load_websites(site_input)
-        # evaluate output db name
-        gen_prefix = self.generate_crawl_prefix(browser_param_path, self.managerpar, len(self.sites))
-        prefix = db_prefix if db_prefix is not None else gen_prefix
-        self.managerpar['database_name'] = prefix + self.managerpar['database_name']
-        self.managerpar['log_file'] = prefix + self.managerpar['log_file']
 
     def crawl(self):
         '''Abstract method to be overwritten by subclasses'''
@@ -27,6 +22,21 @@ class DataCrawler(object):
     def get_dbname(self):
         ''' Gets the generated output dbname '''
         return self.managerpar['database_name']
+
+    def _set_dbname(self, db_prefix, browser_param_path, crawltype):
+        '''Adjusts database output name based on crawltype'''
+        gen_prefix = self.generate_crawl_prefix(browser_param_path, crawltype, len(self.sites))
+        prefix = db_prefix if db_prefix is not None else gen_prefix
+        self.managerpar['database_name'] = prefix + self.managerpar['database_name']
+        self.managerpar['log_file'] = prefix + self.managerpar['log_file']
+
+    @staticmethod
+    def generate_crawl_prefix(browser_params_path, crawltype, amount):
+        '''adjusts parameters for manager suitable for measurement'''
+        tmp = '%s-%s-%s-%s-'
+        timestamp = strftime("%Y%m%d-%H:%M", gmtime())
+        prefix = os.path.basename(browser_params_path).split('_')[0]
+        return tmp %(timestamp, prefix, str(amount), crawltype)
 
     @staticmethod
     def load_websites(file_path):
@@ -39,14 +49,6 @@ class DataCrawler(object):
             return [x.lower() for x in sites]
 
     @staticmethod
-    def generate_crawl_prefix(browser_params_path, manager_params, amount):
-        '''adjusts parameters for manager suitable for measurement'''
-        tmp = '%s-%s-%s-%s-'
-        timestamp = strftime("%Y%m%d-%H:%M", gmtime())
-        prefix = os.path.basename(browser_params_path).split('_')[0]
-        return tmp %(timestamp, prefix, str(amount), manager_params['crawl_type'])
-
-    @staticmethod
     def _load_parameters(file_path):
         '''loads crawl parameters from .json file'''
         with open(file_path, 'r') as data:
@@ -55,8 +57,13 @@ class DataCrawler(object):
 class AnalysisCrawler(DataCrawler):
     '''Crawler generating standard data (storage, http data, javascript)'''
 
+    # constants
+    CRAWL_TYPE = "analysis"
+
+    # behaviour
     def __init__(self, browser_param_path, manager_param_path, site_input, db_prefix=None):
-        super(AnalysisCrawler, self).__init__(browser_param_path, manager_param_path, site_input, db_prefix=None)
+        super(AnalysisCrawler, self).__init__(browser_param_path, manager_param_path, site_input)
+        self._set_dbname(db_prefix, browser_param_path, self.CRAWL_TYPE)
 
     def crawl(self):
         '''Runs a crawl to measure various metrics regarding third-party tracking'''
@@ -76,17 +83,23 @@ class DetectionCrawler(DataCrawler):
     '''Crawler generating data for detection algorithm
        Approach: Unsupervised Detection of Web Trackers '''
 
+    # constants
+    CRAWL_TYPE = "detection"
+    NUM_USERS = 3
+    NUM_VISITS = 3
+
+    # behaviour
     def __init__(self, browser_param_path, manager_param_path, site_input, db_prefix=None):
-        super(DetectionCrawler, self).__init__(browser_param_path, manager_param_path, site_input, db_prefix=None)
+        super(DetectionCrawler, self).__init__(browser_param_path, manager_param_path, site_input)
+        self._set_dbname(db_prefix, browser_param_path, self.CRAWL_TYPE)
 
     def crawl(self):
         '''Runs crawl resulting in dataset for unsupervised tracking detection'''
-        num_visits, num_users = self.managerpar['num_visits'], self.managerpar['num_users']
         self.browserpar['disable_flash'] = True
-        for _ in range(0, num_users):
+        for _ in range(0, self.NUM_USERS):
             manager = TaskManager.TaskManager(self.managerpar, [self.browserpar])
             for site in self.sites:
-                for _ in range(0, num_visits):
+                for _ in range(0, self.NUM_VISITS):
                     command_sequence = CommandSequence.CommandSequence(site)
                     command_sequence.get(sleep=15, timeout=30)
                     manager.execute_command_sequence(command_sequence, index='**')
@@ -95,8 +108,13 @@ class DetectionCrawler(DataCrawler):
 class LoginCrawler(DataCrawler):
     '''Crawler enabling login behavior for certain sites'''
 
+    # constants
+    CRAWL_TYPE = "login"
+
+    # behaviour
     def __init__(self, browser_param_path, manager_param_path, site_input, db_prefix=None):
-        super(LoginCrawler, self).__init__(browser_param_path, manager_param_path, site_input, db_prefix=None)
+        super(LoginCrawler, self).__init__(browser_param_path, manager_param_path, site_input)
+        self._set_dbname(db_prefix, browser_param_path, self.CRAWL_TYPE)
 
     def crawl(self):
         pass

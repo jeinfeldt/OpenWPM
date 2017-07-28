@@ -5,9 +5,5 @@
     "log_file": "openwpm.log",
     "failure_limit": null,
     "testing": false,
-    "num_browsers": 1,
-
-    "crawl_type": "detection",
-    "num_users": 3,
-    "num_visits": 3
+    "num_browsers": 1
 }
