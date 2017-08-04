@@ -106,7 +106,9 @@ class DetectionCrawler(DataCrawler):
             manager.close()
 
 class LoginCrawler(DataCrawler):
-    '''Crawler enabling login behavior for certain sites'''
+    '''Crawler enabling login behavior for certain sites. One can either crawl:
+      statefull: login to certain site and crawl others
+      stateless: crawl different login sites and log results'''
 
     # constants
     CRAWL_TYPE = "login"

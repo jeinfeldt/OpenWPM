@@ -1,16 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 '''Starts crawls executing defined workload for measurement'''
-import sys
+import argparse
 from crawler import AnalysisCrawler, DetectionCrawler, LoginCrawler
-from automation import utilities
 
 # constants
-HELP = '''\nScripts needs to be executed with the following parameters:
-1. path to browser parameter .json-file\n2. path to manager parameter .json-file
-3. site input file (alexa list)
-4. Crawl type (analysis, detection, login)\n(5. Prefix of output db)
-Hint: For better results perform script as sudo\n'''
 CRAWLTYPE_ERROR = "Crawltype unknown! Use analysis, detection, login"
 
 def _init_crawler(browser_path, manager_path, sites_path, crawltype, db_prefix):
@@ -25,21 +19,35 @@ def _init_crawler(browser_path, manager_path, sites_path, crawltype, db_prefix):
         raise ValueError(CRAWLTYPE_ERROR)
 
 def _init():
-    '''guard clause and init for script'''
-    args = sys.argv[1:]
-    if len(args) < 4:
-        print HELP
-        sys.exit()
-    if len(args) == 4:
-        args.append(None)
-    return args
+    '''init argument parser'''
+    parser = argparse.ArgumentParser(description='''Crawl sites following
+    different behaviour and collecting various data.''')
+    parser.add_argument('browserparams',
+                        metavar='browserparam', type=str, help='json file for browser config')
+    parser.add_argument('managerparams',
+                        metavar='managerparam', type=str, help='json file for manager config')
+    parser.add_argument('sites',
+                        metavar='sites', type=str, help='site input file (alexa format)')
+    hlp = 'crawl type (analysis, detection, login)'
+    parser.add_argument('crawltype',
+                        metavar='crawltype', type=str, help=hlp)
+    hlp = 'name of the output sqlite file, otherwise generated'
+    parser.add_argument('--output',
+                        metavar='output', type=str, help=hlp)
+    hlp = 'log into certain site before performing crawl'
+    parser.add_argument('--login',
+                        metavar='login', type=str, help=hlp)
+    return parser
 
 def _main():
     '''wrapper for main functionality'''
-    browser_path, manager_path, sites_path, crawltype, db_prefix = _init()
+    #browser_path, manager_path, sites_path, crawltype, db_prefix = _init()
+    parser = _init()
+    args = parser.parse_args()
+    bpath, mpath, spath = args.browserparams, args.managerparams, args.sites
     # perform crawl
     print 'Preparing crawl...'
-    crawler = _init_crawler(browser_path, manager_path, sites_path, crawltype, db_prefix)
+    crawler = _init_crawler(bpath, mpath, spath, args.crawltype, args.output)
     # better identifiable names for log and db
     print 'Crawling...'
     crawler.crawl()
