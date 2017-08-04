@@ -68,10 +68,9 @@ def privacy(browser_params, fp, root_dir, browser_profile_path):
         fp.set_preference('extensions.adblockplus.subscriptions_autoupdate', False)
         os.mkdir(browser_profile_path + 'adblockplus')
         try:
-            list_loc = os.path.expanduser(browser_params['adblock-plus_list_location'])
-            shutil.copy(os.path.join(list_loc,'patterns.ini'),
+            shutil.copy(os.path.join(root_dir,'firefox_extensions/patterns.ini'),
                     browser_profile_path+'adblockplus/')
-            shutil.copy(os.path.join(list_loc,'elemhide.css'),
+            shutil.copy(os.path.join(root_dir,'firefox_extensions/elemhide.css'),
                     browser_profile_path+'adblockplus/')
         except (KeyError, IOError):
             raise BrowserConfigError(("In order to use AdBlock Plus, you must "
