@@ -1,4 +1,5 @@
 from Errors import CommandExecutionError
+import json
 
 class CommandSequence:
     """A CommandSequence wraps a series of commands to be performed
@@ -125,5 +126,5 @@ class CommandSequence:
         if not self.contains_get_or_browse:
             raise CommandExecutionError("No get or browse request preceding "
                                         "the dump page source command", self)
-        command = ("LOGIN", logindata)
+        command = ("LOGIN", json.dumps(logindata))
         self.commands_with_timeout.append((command, timeout))

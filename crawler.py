@@ -119,6 +119,18 @@ class LoginCrawler(DataCrawler):
         self.loginpar = self._load_parameters(self.LOGIN_PARAMS_PATH)
 
     def crawl(self):
+        '''Log in to site with given params (constants), dump cookies and flash'''
         manager = TaskManager.TaskManager(self.managerpar, [self.browserpar])
-        print self.loginpar
+        for site in self.sites:
+            params = self._fetch_params(site)
+            commandseq = CommandSequence.CommandSequence(site)
+            commandseq.get(sleep=15, timeout=30)
+            commandseq.login(logindata=params, timeout=30)
+            manager.execute_command_sequence(commandseq, index='**')
         manager.close()
+
+    def _fetch_params(self, site):
+        '''Fetch corresponding login params for given site'''
+        key = [key for key in self.loginpar.keys() if key in site][0]
+        par = self.loginpar[key]
+        return (par['emailid'], par['passid'], par['email'], par['password'], par['submitid'])

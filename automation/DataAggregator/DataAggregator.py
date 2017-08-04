@@ -86,6 +86,9 @@ def process_query(query, curr, logger):
         if len(args) == 0:
             curr.execute(statement)
         else:
+            # no logging for login command (we dont want passwords to shop up in db)
+            if len(args) > 1 and args[1] == "LOGIN":
+                args[2] = "no args due to sensible data"
             curr.execute(statement,args)
     except OperationalError as e:
         logger.error("Unsupported query" + '\n' + str(type(e)) + '\n' + str(e) + '\n' + statement + '\n' + str(args))
