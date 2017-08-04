@@ -114,3 +114,16 @@ class CommandSequence:
                                         "the dump page source command", self)
         command = ('RUN_CUSTOM_FUNCTION', function_handle, func_args)
         self.commands_with_timeout.append((command, timeout))
+
+    #--------------------------------------------------------------------------
+    # CUSTOM FUNCTIONS FOR THESIS
+    #--------------------------------------------------------------------------
+
+    def login(self, logindata, timeout=30):
+        '''Login to a specific site'''
+        self.total_timeout += timeout
+        if not self.contains_get_or_browse:
+            raise CommandExecutionError("No get or browse request preceding "
+                                        "the dump page source command", self)
+        command = ("LOGIN", logindata)
+        self.commands_with_timeout.append((command, timeout))

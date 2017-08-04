@@ -3,6 +3,7 @@
 '''Starts crawls executing defined workload for measurement'''
 import sys
 from crawler import AnalysisCrawler, DetectionCrawler, LoginCrawler
+from automation import utilities
 
 # constants
 HELP = '''\nScripts needs to be executed with the following parameters:

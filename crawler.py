@@ -110,11 +110,15 @@ class LoginCrawler(DataCrawler):
 
     # constants
     CRAWL_TYPE = "login"
+    LOGIN_PARAMS_PATH = "params/login_params.json"
 
     # behaviour
     def __init__(self, browser_param_path, manager_param_path, site_input, db_prefix=None):
         super(LoginCrawler, self).__init__(browser_param_path, manager_param_path, site_input)
         self._set_dbname(db_prefix, browser_param_path, self.CRAWL_TYPE)
+        self.loginpar = self._load_parameters(self.LOGIN_PARAMS_PATH)
 
     def crawl(self):
-        pass
+        manager = TaskManager.TaskManager(self.managerpar, [self.browserpar])
+        print self.loginpar
+        manager.close()

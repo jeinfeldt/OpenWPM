@@ -1,5 +1,6 @@
 import browser_commands
 import profile_commands
+import measurement_commands
 
 
 def execute_command(command, webdriver, proxy_queue, browser_settings, browser_params, manager_params, extension_socket):
@@ -58,3 +59,10 @@ def execute_command(command, webdriver, proxy_queue, browser_settings, browser_p
                     "manager_params": manager_params,
                     "extension_socket": extension_socket}
         command[1](*command[2], **arg_dict)
+
+    #--------------------------------------------------------------------------
+    # CUSTOM FUNCTIONS FOR THESIS
+    #--------------------------------------------------------------------------
+
+    if command[0] == "LOGIN":
+        measurement_commands.login(webdriver=webdriver, logindata=command[1])
