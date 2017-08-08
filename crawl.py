@@ -7,14 +7,25 @@ from crawler import AnalysisCrawler, DetectionCrawler, LoginCrawler
 # constants
 CRAWLTYPE_ERROR = "Crawltype unknown! Use analysis, detection, login"
 
-def _init_crawler(browser_path, manager_path, sites_path, crawltype, db_prefix):
+# public
+def load_websites(file_path):
+    '''loads defined amount of pages from alexa file, websites are returned
+       in format http://www.[domainname].[identifier]'''
+    url_format = 'http://www.%s'
+    with open(file_path, 'r') as data:
+        sites = [line.strip() for line in data if "#" not in line]
+        sites = [url_format %(line) for line in sites if line] # remove blank
+        return [x.lower() for x in sites]
+
+# private
+def _init_crawler(browser_path, manager_path, crawltype, db_prefix):
     '''crawls given sites with given parameters'''
     if crawltype == 'analysis':
-        return AnalysisCrawler(browser_path, manager_path, sites_path, db_prefix)
+        return AnalysisCrawler(browser_path, manager_path, db_prefix)
     elif crawltype == 'detection':
-        return DetectionCrawler(browser_path, manager_path, sites_path, db_prefix)
+        return DetectionCrawler(browser_path, manager_path, db_prefix)
     elif crawltype == 'login':
-        return LoginCrawler(browser_path, manager_path, sites_path, db_prefix)
+        return LoginCrawler(browser_path, manager_path, db_prefix)
     else:
         raise ValueError(CRAWLTYPE_ERROR)
 
@@ -37,22 +48,29 @@ def _init():
     hlp = 'log into certain site before performing crawl'
     parser.add_argument('--login',
                         metavar='login', type=str, help=hlp)
+    hlp = 'optional range (including start and end) for input sites, <start>-<end> e.g. 1-5'
+    parser.add_argument('--range',
+                        metavar='range', type=str, help=hlp)
     return parser
 
 def _main():
     '''wrapper for main functionality'''
-    #browser_path, manager_path, sites_path, crawltype, db_prefix = _init()
     parser = _init()
     args = parser.parse_args()
     bpath, mpath, spath = args.browserparams, args.managerparams, args.sites
     # perform crawl
     print 'Preparing crawl...'
-    crawler = _init_crawler(bpath, mpath, spath, args.crawltype, args.output)
+    sites = load_websites(spath)
+    if args.range:
+        start, end = tuple(args.range.split("-"))
+        sites = sites[int(start)-1:int(end)]
+    print sites
+    crawler = _init_crawler(bpath, mpath, args.crawltype, args.output)
     # better identifiable names for log and db
     print 'Crawling...'
-    crawler.crawl()
+    crawler.crawl(sites)
     print 'Finished crawling, data written to: %s' %(crawler.get_dbname())
 
-#main
+# main
 if __name__ == "__main__":
     _main()
