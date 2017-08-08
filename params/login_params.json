@@ -5,5 +5,19 @@
     "submitid": "u_0_t",
     "email": "test",
     "password": "test"
+  },
+  "accounts.google.com": {
+    "emailid": "email",
+    "passid": "pass",
+    "submitid": "u_0_t",
+    "email": "test",
+    "password": "test"
+  },
+  "twitter.com": {
+    "emailid": "email",
+    "passid": "pass",
+    "submitid": "u_0_t",
+    "email": "test",
+    "password": "test"
   }
 }

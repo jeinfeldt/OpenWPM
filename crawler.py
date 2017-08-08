@@ -133,7 +133,7 @@ class LoginCrawler(DataCrawler):
     def set_loginsite(self, loginsite):
         '''Sets login site for crawl. Crawler will login to site and
            crawl given sites regularly (AnalysisCrawler)'''
-        url_format = 'http://www.%s'
+        url_format = 'http://%s'
         if "http" not in loginsite:
             loginsite = url_format %(loginsite)
         self.loginsite = loginsite
