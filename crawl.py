@@ -29,6 +29,21 @@ def _init_crawler(browser_path, manager_path, crawltype, db_prefix):
     else:
         raise ValueError(CRAWLTYPE_ERROR)
 
+def _process_args(args):
+    '''Adjust all necessary entities based on script args'''
+    bpath, mpath, spath = args.browserparams, args.managerparams, args.sites
+    # load sites
+    sites = load_websites(spath)
+    if args.range is not None:
+        start, end = tuple(args.range.split("-"))
+        sites = sites[int(start)-1:int(end)]
+    # fetch and adjust crawler
+    crawler = _init_crawler(bpath, mpath, args.crawltype, args.output)
+    # special behaviour in case of login flag
+    if args.login is not None and args.crawltype == "login":
+        crawler.set_loginsite(args.login)
+    return (crawler, sites)
+
 def _init():
     '''init argument parser'''
     parser = argparse.ArgumentParser(description='''Crawl sites following
@@ -57,16 +72,10 @@ def _main():
     '''wrapper for main functionality'''
     parser = _init()
     args = parser.parse_args()
-    bpath, mpath, spath = args.browserparams, args.managerparams, args.sites
-    # perform crawl
+    # prepare crawl
     print 'Preparing crawl...'
-    sites = load_websites(spath)
-    if args.range:
-        start, end = tuple(args.range.split("-"))
-        sites = sites[int(start)-1:int(end)]
-    print sites
-    crawler = _init_crawler(bpath, mpath, args.crawltype, args.output)
-    # better identifiable names for log and db
+    crawler, sites = _process_args(args)
+    # perform crawl on given sitesa
     print 'Crawling...'
     crawler.crawl(sites)
     print 'Finished crawling, data written to: %s' %(crawler.get_dbname())

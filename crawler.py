@@ -9,6 +9,12 @@ from automation import TaskManager, CommandSequence
 class DataCrawler(object):
     '''High level class encapsulating crawling util functions'''
 
+    # constants
+    DEF_SLEEP = 15
+    DEF_TIMEOUT = 30
+    DEF_COOKIE_TIME = 120
+
+    # behaviour
     def __init__(self, browser_param_path, manager_param_path):
         # read parameters
         self.bpath = browser_param_path
@@ -65,11 +71,11 @@ class AnalysisCrawler(DataCrawler):
             # we run a stateless crawl (fresh profile for each page)
             command_sequence = CommandSequence.CommandSequence(site, reset=True)
             # Start by visiting the page
-            command_sequence.get(sleep=15, timeout=30)
+            command_sequence.get(sleep=self.DEF_SLEEP, timeout=self.DEF_TIMEOUT)
             # dump_profile_cookies/dump_flash_cookies closes the current tab.
-            command_sequence.dump_profile_cookies(120)
-            command_sequence.dump_flash_cookies(120)
-            manager.execute_command_sequence(command_sequence, index='**')
+            command_sequence.dump_profile_cookies(self.DEF_COOKIE_TIME)
+            command_sequence.dump_flash_cookies(self.DEF_COOKIE_TIME)
+            manager.execute_command_sequence(command_sequence, index=None)
         manager.close()
 
 class DetectionCrawler(DataCrawler):
@@ -96,8 +102,8 @@ class DetectionCrawler(DataCrawler):
             for site in sites:
                 for _ in range(0, self.NUM_VISITS):
                     command_sequence = CommandSequence.CommandSequence(site)
-                    command_sequence.get(sleep=15, timeout=30)
-                    manager.execute_command_sequence(command_sequence, index='**')
+                    command_sequence.get(sleep=self.DEF_SLEEP, timeout=self.DEF_TIMEOUT)
+                    manager.execute_command_sequence(command_sequence, index=None)
             manager.close()
 
 class LoginCrawler(DataCrawler):
@@ -114,17 +120,54 @@ class LoginCrawler(DataCrawler):
         super(LoginCrawler, self).__init__(browser_param_path, manager_param_path)
         self.db_prefix = db_prefix
         self.loginpar = self._load_parameters(self.LOGIN_PARAMS_PATH)
+        self.loginsite = None
 
     def crawl(self, sites):
         '''Log in to site with given params (constants), dump cookies and flash'''
         self._set_dbname(sites, self.db_prefix, self.bpath, self.CRAWL_TYPE)
+        if self.loginsite is not None:
+            self._statefull_crawl(self.loginsite, sites)
+        else:
+            self._stateless_crawl(sites)
+
+    def set_loginsite(self, loginsite):
+        '''Sets login site for crawl. Crawler will login to site and
+           crawl given sites regularly (AnalysisCrawler)'''
+        url_format = 'http://www.%s'
+        if "http" not in loginsite:
+            loginsite = url_format %(loginsite)
+        self.loginsite = loginsite
+
+    def _stateless_crawl(self, sites):
+        '''Performs a crawl with sites providing login'''
         manager = TaskManager.TaskManager(self.managerpar, [self.browserpar])
         for site in sites:
             params = self._fetch_params(site)
-            commandseq = CommandSequence.CommandSequence(site)
-            commandseq.get(sleep=15, timeout=30)
-            commandseq.login(logindata=params, timeout=30)
-            manager.execute_command_sequence(commandseq, index='**')
+            commandseq = CommandSequence.CommandSequence(site, reset=True)
+            commandseq.get(sleep=self.DEF_SLEEP, timeout=self.DEF_TIMEOUT)
+            commandseq.login(logindata=params, timeout=self.DEF_TIMEOUT)
+            manager.execute_command_sequence(commandseq, index=None)
+        manager.close()
+
+    def _statefull_crawl(self, loginsite, sites):
+        '''Performs crawl by logging into one site and regularly crawling others'''
+        manager = TaskManager.TaskManager(self.managerpar, [self.browserpar])
+        # login to given page
+        params = self._fetch_params(loginsite)
+        commandseq = CommandSequence.CommandSequence(loginsite)
+        commandseq.get(sleep=self.DEF_SLEEP, timeout=self.DEF_TIMEOUT)
+        commandseq.login(logindata=params, timeout=self.DEF_TIMEOUT)
+        manager.execute_command_sequence(commandseq, index=None)
+        # proceed to crawl pages
+        for site in sites:
+            # we run a stateless crawl (fresh profile for each page)
+            command_sequence = CommandSequence.CommandSequence(site)
+            # Start by visiting the page
+            command_sequence.get(sleep=self.DEF_SLEEP, timeout=self.DEF_TIMEOUT)
+            # dump_profile_cookies/dump_flash_cookies closes the current tab.
+            command_sequence.dump_profile_cookies(self.DEF_COOKIE_TIME)
+            command_sequence.dump_flash_cookies(self.DEF_COOKIE_TIME)
+            manager.execute_command_sequence(command_sequence, index=None)
         manager.close()
 
     def _fetch_params(self, site):
