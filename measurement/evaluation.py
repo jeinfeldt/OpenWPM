@@ -165,6 +165,7 @@ class DataEvaluator(object):
                 frequency = data.get(ck_domain, 0)
                 data[ck_domain] = frequency + 1
         # data is sorted based on frequency in descending order
+        # TODO: also print amount of sites present
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
     def rank_third_party_cookie_keys(self, amount=5):
@@ -189,7 +190,9 @@ class DataEvaluator(object):
             if operator_func(top_domain, ck_domain):
                 amount = data.get(top_domain, 0)
                 data[top_domain] = amount + 1
+        # TODO: Also get average third-party cookies per page
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
+        data['cookie_avg'] = data['total_sum'] / len(data.keys())
         return data
 
     #---------------------------------------------------------------------------
