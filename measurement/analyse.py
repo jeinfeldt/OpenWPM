@@ -32,13 +32,13 @@ def _init_evaluation(eva):
                      ("trackingcontext", eva.eval_tracking_context), #param
                      ("loadingtime", eva.calc_pageload),
                      ("cookiesync", eva.detect_cookie_syncing),
-                     #("rank_prominence", eva.rank_third_party_prominence),
-                     #("rank_simple", eva.rank_third_party_domains),
-                     #("rank_org", eva.rank_organisation_reach),
-                     #("detected_trackers", eva.discover_new_trackers) #params
+                     ("rank_prominence", eva.rank_third_party_prominence),
+                     ("rank_simple", eva.rank_third_party_domains),
+                     ("rank_org", eva.rank_organisation_reach),
+                     ("detected_trackers", eva.discover_new_trackers) #params
                     ],
             "fingerprinting": [
-                #("fingerprint_matches", eva.eval_fingerprint_scripts), #param
+                ("fingerprint_matches", eva.eval_fingerprint_scripts), #param
                 ("detected_canvas_js", eva.detect_canvas_fingerprinting),
                 ("detected_font_js", eva.detect_font_fingerprinting)]}
     return data
@@ -88,8 +88,8 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    #data = evaluate(evaluation)
-    data = evaluator.eval_third_party_cookies()
+    data = evaluate(evaluation)
+    #data = evaluator.eval_third_party_cookies()
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:

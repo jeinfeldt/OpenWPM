@@ -46,7 +46,9 @@ def _map_storage_data(data):
     '''Maps storage data for template'''
     context = {}
     context['first_cookies'] = data['firstparty_cookies']['total_sum']
+    context['first_cookies_avg'] = data['firstparty_cookies']['cookie_avg']
     context['third_cookies'] = data['thirdparty_cookies']['total_sum']
+    context['third_cookies_avg'] = data['thirdparty_cookies']['cookie_avg']
     context['flash_cookies'] = data['flash_cookies']['total_sum']
     context['localstorage'] = data['localstorage']['total_sum']
     # ranks

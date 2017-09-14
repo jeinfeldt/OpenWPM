@@ -154,7 +154,7 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
-    def rank_third_party_cookie_domains(self, amount=5):
+    def rank_third_party_cookie_domains(self, amount=10):
         '''Rank third-party cookie domains based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE)
@@ -165,10 +165,9 @@ class DataEvaluator(object):
                 frequency = data.get(ck_domain, 0)
                 data[ck_domain] = frequency + 1
         # data is sorted based on frequency in descending order
-        # TODO: also print amount of sites present
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
-    def rank_third_party_cookie_keys(self, amount=5):
+    def rank_third_party_cookie_keys(self, amount=10):
         '''Rank third-party cookie key based on crawl data (descending)'''
         data = {}
         self.cursor.execute(Queries.COOKIE_NAME)
@@ -190,7 +189,6 @@ class DataEvaluator(object):
             if operator_func(top_domain, ck_domain):
                 amount = data.get(top_domain, 0)
                 data[top_domain] = amount + 1
-        # TODO: Also get average third-party cookies per page
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
         data['cookie_avg'] = data['total_sum'] / len(data.keys())
         return data
@@ -205,25 +203,6 @@ class DataEvaluator(object):
         num_requests = [len(x) for x in sites_requests.values()]
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
         data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
-        return data
-
-    def eval_response_traffic(self):
-        '''Evaluates amount of received bytes based on content length
-        field in response headers'''
-        data = {}
-        sites_responses = self._map_site_to_responses()
-        for site, responses in sites_responses.items():
-            headers = [ast.literal_eval(tup[1]) for tup in responses]
-            fields = [y for x in headers for y in x if y[0] == "Content-Length"]
-            clengths = [x[1] for x in fields if len(x) == 2 and x[1].isdigit()]
-            if len(clengths) > 0:
-                data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
-        # calc total sum and average
-        data['total_sum'] = reduce(lambda x, y: int(x) + int(y), data.values())
-        data['byte_avg'] = data['total_sum'] / len(sites_responses.keys())
-        # convert to kB
-        data['total_sum'] = str(data['total_sum']/1000) + "kB"
-        data['byte_avg'] = str(data['byte_avg']/1000) + "kB"
         return data
 
     def eval_tracking_context(self, blocklist):
@@ -244,6 +223,25 @@ class DataEvaluator(object):
         data["total_sum"] = reduce(lambda x, y: x + y, data.values())
         data["unique_trackers"] = list(uniquedoms)
         data["tracker_avg"] = data["total_sum"] / len(sites_requests.keys())
+        return data
+
+    def eval_response_traffic(self):
+        '''Evaluates amount of received bytes based on content length
+        field in response headers'''
+        data = {}
+        sites_responses = self._map_site_to_responses()
+        for site, responses in sites_responses.items():
+            headers = [ast.literal_eval(tup[1]) for tup in responses]
+            fields = [y for x in headers for y in x if y[0] == "Content-Length"]
+            clengths = [x[1] for x in fields if len(x) == 2 and x[1].isdigit()]
+            if len(clengths) > 0:
+                data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
+        # calc total sum and average
+        data['total_sum'] = reduce(lambda x, y: int(x) + int(y), data.values())
+        data['byte_avg'] = data['total_sum'] / len(sites_responses.keys())
+        # convert to kB
+        data['total_sum'] = str(data['total_sum']/1000) + "kB"
+        data['byte_avg'] = str(data['byte_avg']/1000) + "kB"
         return data
 
     def calc_pageload(self):
@@ -299,7 +297,7 @@ class DataEvaluator(object):
                 data.add(self._get_subdomain(match) + "." + self._get_domain(match))
         return list(data)
 
-    def rank_third_party_prominence(self, amount=5):
+    def rank_third_party_prominence(self, amount=10):
         '''Ranks third-party domains based on suggested prominence metric
            Approach: A 1-million-site Measurement and Analysis'''
         data = {}
@@ -313,7 +311,7 @@ class DataEvaluator(object):
             data[dom] = reduce(lambda x, y: x + y, [1.0/x for x in ranks])
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    def rank_third_party_domains(self, amount=5):
+    def rank_third_party_domains(self, amount=10):
         '''Rank third-party domains based in crawl data (dascending)
            What domain (resource) is most requested? Based on prevalence'''
         data = {}
@@ -326,6 +324,7 @@ class DataEvaluator(object):
             data[domain] = len(sites)
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
+    #TODO: Reevaluate, facebook.com does not make sense
     def rank_organisation_reach(self, disconnect_dict):
         '''Ranks the reach of an organisation based on the disconnect blocking
            list which contains organisations with their associated domains
@@ -344,7 +343,7 @@ class DataEvaluator(object):
             for domain in org_domains[orgname]:
                 amount.update([site for site, reqs in items if self._is_domain_present(domain, reqs)])
             data[orgname] = len(amount)
-        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:5]
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:10]
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers

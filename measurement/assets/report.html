@@ -37,13 +37,17 @@
     <table class="table table-bordered">
       <tr>
         <th>first-party cookies</th>
+        <th>avg.</th>
         <th>third-party cookies</th>
+        <th>avg.</th>
         <th>flash</th>
         <th>localstorage</th>
       </tr>
       <tr>
         <td>{{first_cookies}}</td>
+        <td>{{first_cookies_avg}}</td>
         <td>{{third_cookies}}</td>
+        <td>{{third_cookies_avg}}</td>
         <td>{{flash_cookies}}</td>
         <td>{{localstorage}}</td>
       </tr>
@@ -59,7 +63,7 @@
         <td>
           <ol>
             {% for domain in cookie_domains %}
-            <li>{{domain[0]}}</li>
+            <li>{{domain[0]}}, amount cookies: {{domain[1]}}</li>
             {% endfor %}
           </ol>
         </td>
@@ -92,6 +96,7 @@
         <th>unique blocked domains</th>
         <th>cookie syncing</th>
       </tr>
+      <tr>
         <td>{{count_requests}}</td>
         <td>{{avg_requests}}</td>
         <td>{{avg_pageload}}</td>
@@ -100,7 +105,6 @@
         <td>{{avg_trackers}}</td>
         <td>{{count_unique}}</td>
         <td>{{count_cookiesync}}</td>
-      <tr>
       </tr>
     </table>
 
@@ -110,13 +114,12 @@
         <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
         <th>top {{rank_prominence|length}} requested domains (prominence)</th>
         <th>top {{rank_org|length}} requested organisations</th>
-        <th>detected new trackers</th>
       </tr>
       <tr>
         <td>
           <ol>
             {% for domain in rank_prevalence %}
-            <li>{{domain[0]}}</li>
+            <li>{{domain[0]}}, sites: {{domain[1]}}</li>
             {% endfor %}
           </ol>
         </td>
@@ -135,6 +138,16 @@
           </ol>
         </td>
         <td>
+      </tr>
+    </table>
+
+    <!-- Detected new tackers-->
+    <table class="table table-bordered">
+      <tr>
+        <th>detected new trackers</th>
+      </tr>
+      <tr>
+        <td>
           <ol>
             {% for domain in new_trackers %}
             <li>{{domain}}</li>
@@ -143,6 +156,7 @@
         </td>
       </tr>
     </table>
+
     <p><span style="font-weight: bold">Note:</span>
       A domain is classified as third party if it does not match a hosts
       first level domain.
@@ -156,14 +170,14 @@
 
     <!-- Fingerprinting (fingerprint_matches,detected_canvas_js,detected_font_js)-->
     <h4>Active Fingerprinting</h4>
+    <p>Sites using blacklisted scripts: {{count_fp_scripts}}</p>
+
+    <!-- recognized canvas fingerprinting scripts -->
     <table class="table table-bordered">
       <tr>
-        <th>sites using scripts</th>
         <th>canvas fp scripts</th>
-        <th>font fp scripts</th>
       </tr>
       <tr>
-        <td>{{count_fp_scripts}}</td>
         <td>
           <ol>
             {% for url in canvas_scripts %}
@@ -171,6 +185,15 @@
             {% endfor %}
           </ol>
         </td>
+      </tr>
+    </table>
+
+    <!-- recognized font fingerprinting scripts -->
+    <table class="table table-bordered">
+      <tr>
+        <th>font fp scripts</th>
+      </tr>
+      <tr>
         <td>
           <ol>
             {% for url in font_scripts %}
