@@ -150,6 +150,7 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
+    #TODO: Add to Output
     def eval_tracking_cookies(self):
         '''Evaluates prevalence of tracking cookies based on crawl data
            including their average lifetime.
@@ -204,6 +205,7 @@ class DataEvaluator(object):
                 data[ck_name] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
+    #TODO: Add to output
     def calc_avg_cookie_lifetime(self):
         '''Calcualte average lifetime of third-party and first-party cookies
         in days'''
@@ -251,20 +253,34 @@ class DataEvaluator(object):
         data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
         return data
 
+    def eval_tracker_distribution(self, blocklist):
+        '''Maps Trackers exclusively to first rank they appear on.
+        Gives insight regarding the question, when have I seen all trackers?'''
+        data, trackers = {}, set()
+        sites_rank = self._map_site_to_rank()
+        sites_requests = self._map_site_to_requests()
+        blocked = self._flatten_blocklist(blocklist)
+        ranksorted = sorted(sites_rank.items(), key=lambda (k, v): (v, k))
+        ranksorted = [x for x in ranksorted if x[0] in sites_requests]# remove sites without thiry-party
+        # map amount of new trackers to rank
+        for site, rank in ranksorted:
+            domains = self._get_blocked_domains(sites_requests[site], blocked)
+            matches = [dom for dom in domains if dom not in trackers]
+            data[rank] = len(matches)
+            trackers.update(matches)
+        return data
+
     def eval_tracking_context(self, blocklist):
         '''Classifiyes third partys as trackers based on given blocking list (json)
         maps sites to amount of domains (NOT resources) that would have been blocked'''
         data, uniquedoms = {}, set()
-        categorie_domains = self._map_category_to_domains(blocklist)
         sites_requests = self._map_site_to_requests()
-        blocked = [domain for l in categorie_domains.values() for domain in l]
+        blocked = self._flatten_blocklist(blocklist)
         # check all blocked domains that occur in site request urls
         for site, requests in sites_requests.items():
-            requrls = [tup[0] for tup in requests]
-            matches = [dom for dom in blocked if dom in "".join(requrls)]
-            if len(matches) > 0:
-                data[site] = len(matches)
-                uniquedoms.update(matches)
+            matches = self._get_blocked_domains(requests, blocked)
+            data[site] = len(matches)
+            uniquedoms.update(matches)
         # calc total sum, unique trackers and avg per site
         data["total_sum"] = reduce(lambda x, y: x + y, data.values())
         data["unique_trackers"] = list(uniquedoms)
@@ -396,6 +412,16 @@ class DataEvaluator(object):
                 amount.update([site for site, reqs in items if self._is_domain_present(domain, reqs)])
             data[orgname] = len(amount)
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:10]
+
+    def _get_blocked_domains(self, requests, blocklist):
+        '''Matches requests against blocklist, returning matches'''
+        requrls = set([self._get_domain(tup[0]) for tup in requests])
+        return [url for url in requrls if url in blocklist]
+
+    def _flatten_blocklist(self, nestedlist):
+        '''Flattens disconnect blocklist to domain list'''
+        categorie_domains = self._map_category_to_domains(nestedlist)
+        return [domain for l in categorie_domains.values() for domain in l]
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers
