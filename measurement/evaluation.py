@@ -18,7 +18,7 @@ class Queries(object):
     from site_visits natural join profile_cookies'''
 
     COOKIE_EXPIRY = '''select site_url, baseDomain, name, value, expiry, creationTime
-    from site_visits natural join profile_cookies;'''
+    from site_visits natural join profile_cookies'''
 
     FLASH = '''select site_url from site_visits, flash_cookies
     where site_visits.visit_id == flash_cookies.visit_id'''
@@ -150,13 +150,25 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
-    #TODO
     def eval_tracking_cookies(self):
-        '''Evaluates prevalence of third party TRACKING cookies based on crawl data.
+        '''Evaluates prevalence of tracking cookies based on crawl data
+           including their average lifetime.
            third-party: cookies set outside of top level domain
            tracking:    expiry > 1 day, value > 35 characters
            Approach: TrackAdvisor: Taking Back Browsing Privacy From Third-Party Trackers'''
         data = {}
+        self.cursor.execute(Queries.COOKIE_EXPIRY)
+        for site_url, ck_domain, ck_name, ck_value, expiry, created in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            expiry = expiry / (60*60*24) # in sec
+            created = created / (1000*1000*60*60*24) # in microsec
+            lifetime = expiry - created
+            if top_domain != ck_domain and len(ck_value) > 35 and lifetime > 1:
+                amount = data.get(top_domain, 0)
+                data[top_domain] = amount + 1
+        # summary of data
+        data['total_sum'] = reduce(lambda x, y: x + y, data.values())
+        data['tracking_cookie_avg'] = data['total_sum'] / len(data.keys())
         return data
 
     def eval_localstorage_usage(self):
