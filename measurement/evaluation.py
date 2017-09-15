@@ -17,6 +17,9 @@ class Queries(object):
     COOKIE_NAME = '''select site_url, baseDomain, profile_cookies.name
     from site_visits natural join profile_cookies'''
 
+    COOKIE_EXPIRY = '''select site_url, baseDomain, name, value, expiry, creationTime
+    from site_visits natural join profile_cookies;'''
+
     FLASH = '''select site_url from site_visits, flash_cookies
     where site_visits.visit_id == flash_cookies.visit_id'''
 
@@ -43,10 +46,11 @@ class Queries(object):
     REQUEST_URLS = '''select distinct(url) from http_requests
     where is_third_party_channel=1'''
 
-    HTTP_TIMESTAMPS = '''select site_url, http_requests.time_stamp, http_responses.time_stamp
-    from site_visits join http_requests on site_visits.visit_id = http_requests.visit_id
-    join http_responses on site_visits.visit_id = http_responses.visit_id
-	where http_requests.id = http_responses.id'''
+    REQUEST_TIMESTAMPS = '''select site_url, time_stamp from site_visits join http_requests
+    on site_visits.visit_id = http_requests.visit_id'''
+
+    RESPONSE_TIMESTAMPS = '''select site_url, time_stamp from site_visits join http_responses
+    on site_visits.visit_id = http_responses.visit_id'''
 
     USER_IDS = '''select distinct(crawl_id) from crawl'''
 
@@ -146,6 +150,15 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
+    #TODO
+    def eval_tracking_cookies(self):
+        '''Evaluates prevalence of third party TRACKING cookies based on crawl data.
+           third-party: cookies set outside of top level domain
+           tracking:    expiry > 1 day, value > 35 characters
+           Approach: TrackAdvisor: Taking Back Browsing Privacy From Third-Party Trackers'''
+        data = {}
+        return data
+
     def eval_localstorage_usage(self):
         '''Evaluates the usage of localstorage across unique sites'''
         data = {}
@@ -178,6 +191,27 @@ class DataEvaluator(object):
                 frequency = data.get(ck_name, 0)
                 data[ck_name] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
+
+    def calc_avg_cookie_lifetime(self):
+        '''Calcualte average lifetime of third-party and first-party cookies
+        in days'''
+        data, thirdpty_expiry, firstpty_expiry = {}, [], []
+        self.cursor.execute(Queries.COOKIE_EXPIRY)
+        for site_url, ck_domain, ck_name, ck_value, expiry, created in self.cursor.fetchall():
+            top_domain = self._get_domain(site_url)
+            expiry = expiry / (60*60*24) # in sec
+            created = created / (1000*1000*60*60*24) # in microsec
+            # distinguish cookies
+            if top_domain != ck_domain: # third-party
+                thirdpty_expiry.append(expiry - created)
+            else: #first-party
+                firstpty_expiry.append(expiry - created)
+        # calculate average values
+        fp_avg = reduce(lambda x, y: x + y, firstpty_expiry)
+        tp_avg = reduce(lambda x, y: x + y, thirdpty_expiry)
+        data['fp_expiry_avg'] = fp_avg / len(firstpty_expiry)
+        data['tp_expiry_avg'] = tp_avg / len(thirdpty_expiry)
+        return data
 
     def _eval_cookies(self, operator_func):
         '''Evaluates cookie data based on given operator'''
@@ -245,21 +279,27 @@ class DataEvaluator(object):
         return data
 
     def calc_pageload(self):
-        '''Calculates pageload (initial request to last response time for websites'''
-        data = {}
+        '''Calculates pageload time (in milliseconds) according to timestamp between initial
+        request to last response websites Note: Failed sites of the crawl are ignored'''
+        data, site_reqstamps, site_respstamps = {}, {}, {}
         failed = self._eval_failed_sites()
-        self.cursor.execute(Queries.HTTP_TIMESTAMPS)
-        for site, req_timestamp, resp_timestamp in self.cursor.fetchall():
-            if site not in failed: # do not consider failed pages
-                data.setdefault(site, []).append((req_timestamp, resp_timestamp))
-        # analysis of timestamps
-        for site, timestamps in data.items():
-            min_req = min([x[0] for x in timestamps])
-            max_resp = max([x[1] for x in timestamps])
-            # calc time
+        # map request timestamps
+        self.cursor.execute(Queries.REQUEST_TIMESTAMPS)
+        for site, timestamp in self.cursor.fetchall():
+            if site not in failed:
+                site_reqstamps.setdefault(site, []).append(timestamp)
+        # map response timestamps
+        self.cursor.execute(Queries.RESPONSE_TIMESTAMPS)
+        for site, timestamp in self.cursor.fetchall():
+            if site not in failed:
+                site_respstamps.setdefault(site, []).append(timestamp)
+        # calc time difference first request, last response
+        for site in site_respstamps:
+            min_req = min(site_reqstamps[site])
+            max_resp = max(site_respstamps[site])
             data[site] = self._calc_request_timediff(min_req, max_resp)
         avg = reduce(lambda x, y: x + y, data.values()) / len(data.keys())
-        data["loadtime_avg"] = str(avg) + "ms"
+        data["loadtime_avg"] = avg
         return data
 
     def detect_cookie_syncing(self):
@@ -324,7 +364,6 @@ class DataEvaluator(object):
             data[domain] = len(sites)
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    #TODO: Reevaluate, facebook.com does not make sense
     def rank_organisation_reach(self, disconnect_dict):
         '''Ranks the reach of an organisation based on the disconnect blocking
            list which contains organisations with their associated domains
@@ -332,10 +371,11 @@ class DataEvaluator(object):
         data = {}
         org_domains = self._map_org_to_domains(disconnect_dict)
         org_orgurl = self._map_org_to_orgurl(disconnect_dict)
+        domains = self._get_requested_domains()
         site_requests = self._map_site_to_requests()
         # filter only orgnames present in crawl
         items = org_orgurl.items()
-        orgnames = [org for org, url in items if self._get_domain(url) in site_requests.keys()]
+        orgnames = [org for org, url in items if self._get_domain(url) in domains]
         # check for any associated domains in requests
         items = site_requests.items()
         for orgname in orgnames:
@@ -470,6 +510,7 @@ class DataEvaluator(object):
         '''Checks whether cookie attributes classify as id cookie'''
         check = True
         # note: expiry in sec, creationtime in microsec
+        # https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsICookie2
         days_expiry = t_expiry / (60*60*24)
         days_creation = t_creation / (1000*1000*60*60*24)
         # expiration date over 90 days in the future

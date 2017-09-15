@@ -88,8 +88,8 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    data = evaluate(evaluation)
-    #data = evaluator.eval_third_party_cookies()
+    #data = evaluate(evaluation)
+    data = evaluator.calc_avg_cookie_lifetime()
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:
