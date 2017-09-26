@@ -45,12 +45,20 @@ def _map_crawl_data(data):
 def _map_storage_data(data):
     '''Maps storage data for template'''
     context = {}
+    # first-party cookies
     context['first_cookies'] = data['firstparty_cookies']['total_sum']
     context['first_cookies_avg'] = data['firstparty_cookies']['cookie_avg']
+    context['first_lifetime_avg'] = data['cookie_lifetime']['fp_expiry_avg']
+    # third-party cookies
     context['third_cookies'] = data['thirdparty_cookies']['total_sum']
     context['third_cookies_avg'] = data['thirdparty_cookies']['cookie_avg']
+    context['third_lifetime_avg'] = data['cookie_lifetime']['tp_expiry_avg']
+    # other
     context['flash_cookies'] = data['flash_cookies']['total_sum']
     context['localstorage'] = data['localstorage']['total_sum']
+    # tracking cookies
+    context['tracking_cookies'] = data['tracking_cookies']['total_sum']
+    context['tracking_cookies_avg'] = data['tracking_cookies']['tracking_cookie_avg']
     # ranks
     context['cookie_domains'] = data["rank_cookie_domains"]
     context['cookie_keys'] = data["rank_cookie_keys"]

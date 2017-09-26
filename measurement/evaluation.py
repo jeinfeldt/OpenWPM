@@ -150,14 +150,12 @@ class DataEvaluator(object):
         data['total_sum'] = len(data['sites'])
         return data
 
-    #TODO: Add to Output
     def eval_tracking_cookies(self):
-        '''Evaluates prevalence of tracking cookies based on crawl data
-           including their average lifetime.
+        '''Evaluates prevalence of tracking cookies based on crawl data.
            third-party: cookies set outside of top level domain
            tracking:    expiry > 1 day, value > 35 characters
            Approach: TrackAdvisor: Taking Back Browsing Privacy From Third-Party Trackers'''
-        data = {}
+        data, lifetimes = {}, []
         self.cursor.execute(Queries.COOKIE_EXPIRY)
         for site_url, ck_domain, ck_name, ck_value, expiry, created in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
@@ -205,7 +203,6 @@ class DataEvaluator(object):
                 data[ck_name] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): (v, k), reverse=True)[:amount]
 
-    #TODO: Add to output
     def calc_avg_cookie_lifetime(self):
         '''Calcualte average lifetime of third-party and first-party cookies
         in days'''
@@ -261,7 +258,7 @@ class DataEvaluator(object):
         sites_requests = self._map_site_to_requests()
         blocked = self._flatten_blocklist(blocklist)
         ranksorted = sorted(sites_rank.items(), key=lambda (k, v): (v, k))
-        ranksorted = [x for x in ranksorted if x[0] in sites_requests]# remove sites without thiry-party
+        ranksorted = [x for x in ranksorted if x[0] in sites_requests] # remove sites without thiry-party
         # map amount of new trackers to rank
         for site, rank in ranksorted:
             domains = self._get_blocked_domains(sites_requests[site], blocked)
@@ -608,9 +605,9 @@ class DataEvaluator(object):
         resources = flatblacklist + canvasscripts + fontscripts
         scripts = [(self._get_domain(x), self._get_resource_name(x)) for x in resources]
         # evalaute which sites embed scripts and map to rank
-        for site, js in site_scripts.items():
-            js = [(self._get_domain(x), self._get_resource_name(x)) for x in js]
-            matches = set([tpl for tpl in js if tpl in scripts])
+        for site, sitejs in site_scripts.items():
+            sitejs = [(self._get_domain(x), self._get_resource_name(x)) for x in sitejs]
+            matches = set([tpl for tpl in sitejs if tpl in scripts])
             data[sites_rank[site]] = len(matches)
         return data
 
