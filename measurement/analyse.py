@@ -88,10 +88,7 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    #data = evaluate(evaluation)
-    #data = evaluator.eval_tracking_cookies()
-    #data = evaluator.eval_tracker_distribution(_load_json(BLOCKLIST))
-    data = evaluator.eval_tracking_context(_load_json(BLOCKLIST))
+    data = evaluate(evaluation)
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:

@@ -595,6 +595,25 @@ class DataEvaluator(object):
         data["total_sum"] = len(unique_sites)
         return data
 
+    def eval_fingerprint_distribution(self, blacklist):
+        '''Evaluates the distribution of fingerprinting scripts based on the rank
+        they appeared on'''
+        data = {}
+        sites_rank = self._map_site_to_rank()
+        site_scripts = self._map_site_to_js()
+        flatblacklist = [x for l in blacklist.values() for x in l]
+        canvasscripts = self.detect_canvas_fingerprinting()
+        fontscripts = self.detect_font_fingerprinting()
+        # combine all scripts for general blacklist (domain, scriptname)
+        resources = flatblacklist + canvasscripts + fontscripts
+        scripts = [(self._get_domain(x), self._get_resource_name(x)) for x in resources]
+        # evalaute which sites embed scripts and map to rank
+        for site, js in site_scripts.items():
+            js = [(self._get_domain(x), self._get_resource_name(x)) for x in js]
+            matches = set([tpl for tpl in js if tpl in scripts])
+            data[sites_rank[site]] = len(matches)
+        return data
+
     def detect_canvas_fingerprinting(self):
         '''Detects scripts showing canvas fingerprinting behaviour
            Approach: A 1-million-site Measurement and Analysis'''
