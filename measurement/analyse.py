@@ -92,6 +92,7 @@ def _main():
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
     data = evaluate(evaluation)
+    #data = evaluator.rank_third_party_requests2()
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:

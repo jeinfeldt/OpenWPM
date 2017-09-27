@@ -125,9 +125,8 @@
     <!-- Http Ranks (prominence_rank,simple_rank)-->
     <table class="table table-bordered">
       <tr>
-        <th>top {{rank_prevalence|length}} requested domains (prevalence)</th>
-        <th>top {{rank_prominence|length}} requested domains (prominence)</th>
-        <th>top {{rank_org|length}} requested organisations</th>
+        <th>top {{rank_prevalence|length}} site occurance</th>
+        <th>top {{rank_prominence|length}} prominence</th>
       </tr>
       <tr>
         <td>
@@ -144,10 +143,26 @@
             {% endfor %}
           </ol>
         </td>
+      </tr>
+    </table>
+
+    <table class="table table-bordered">
+      <tr>
+        <th>top {{rank_org|length}} org. reach</th>
+        <th>top {{rank_requests|length}} requests</th>
+      </tr>
+      <tr>
         <td>
           <ol>
             {% for org, sites in rank_org %}
             <li>{{org}}, sites: {{sites}}</li>
+            {% endfor %}
+          </ol>
+        </td>
+        <td>
+          <ol>
+            {% for org, requests in rank_requests %}
+            <li>{{org}}, requests: {{requests}}</li>
             {% endfor %}
           </ol>
         </td>

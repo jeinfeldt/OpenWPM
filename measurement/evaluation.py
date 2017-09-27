@@ -368,11 +368,11 @@ class DataEvaluator(object):
            Which domain receives the most amount of requests?'''
         data = {}
         site_requests = self._map_site_to_requests()
-        domains = self._get_requested_domains()
-        requests = [y[0] for x in site_requests.values() for y in x]
-        for domain in domains: # how many requests refer to domain?
-            matches = [req for req in requests if domain in req]
-            data[domain] = len(matches)
+        for reqtpl in site_requests.values():
+            reqdomains = [self._get_domain(tpl[0]) for tpl in reqtpl]
+            for domain in reqdomains:
+                frequency = data.get(domain, 0)
+                data[domain] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
     def rank_third_party_prominence(self, amount=10):
@@ -397,7 +397,7 @@ class DataEvaluator(object):
         data = {}
         site_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
-        for _, requests in site_requests.items():
+        for requests in site_requests.values():
             reqdoms = set([self._get_domain(req[0]) for req in requests])
             matches = [dom for dom in reqdoms if dom in domains]
             for domain in matches:

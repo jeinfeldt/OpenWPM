@@ -73,12 +73,14 @@ def _map_http_data(data):
     context['count_cookiesync'] = data['cookiesync']['total_sum']
     context['avg_resp_bytes'] = data['response_traffic']['byte_avg']
     # ranks
-    if 'rank_simple' in data:
-        context['rank_prevalence'] = data['rank_simple']
+    if 'rank_requests' in data:
+        context['rank_requests'] = data['rank_requests']
     if 'rank_prominence' in data:
         context['rank_prominence'] = data['rank_prominence']
     if 'rank_org' in data:
         context['rank_org'] = data['rank_org']
+    if 'rank_simple' in data:
+        context['rank_prevalence'] = data['rank_simple']
     # trackers
     if 'new_trackers' in data:
         context['new_trackers'] = data['detected_trackers']
