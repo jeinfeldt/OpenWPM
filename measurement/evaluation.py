@@ -155,9 +155,9 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain
            tracking:    expiry > 1 day, value > 35 characters
            Approach: TrackAdvisor: Taking Back Browsing Privacy From Third-Party Trackers'''
-        data, lifetimes = {}, []
+        data = {}
         self.cursor.execute(Queries.COOKIE_EXPIRY)
-        for site_url, ck_domain, ck_name, ck_value, expiry, created in self.cursor.fetchall():
+        for site_url, ck_domain, _, ck_value, expiry, created in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             expiry = expiry / (60*60*24) # in sec
             created = created / (1000*1000*60*60*24) # in microsec
@@ -208,7 +208,7 @@ class DataEvaluator(object):
         in days'''
         data, thirdpty_expiry, firstpty_expiry = {}, [], []
         self.cursor.execute(Queries.COOKIE_EXPIRY)
-        for site_url, ck_domain, ck_name, ck_value, expiry, created in self.cursor.fetchall():
+        for site_url, ck_domain, _, _, expiry, created in self.cursor.fetchall():
             top_domain = self._get_domain(site_url)
             expiry = expiry / (60*60*24) # in sec
             created = created / (1000*1000*60*60*24) # in microsec
@@ -258,7 +258,8 @@ class DataEvaluator(object):
         sites_requests = self._map_site_to_requests()
         blocked = self._flatten_blocklist(blocklist)
         ranksorted = sorted(sites_rank.items(), key=lambda (k, v): (v, k))
-        ranksorted = [x for x in ranksorted if x[0] in sites_requests] # remove sites without thiry-party
+        # remove sites without thiry-party
+        ranksorted = [x for x in ranksorted if x[0] in sites_requests]
         # map amount of new trackers to rank
         for site, rank in ranksorted:
             domains = self._get_blocked_domains(sites_requests[site], blocked)
@@ -362,6 +363,18 @@ class DataEvaluator(object):
                 data.add(self._get_subdomain(match) + "." + self._get_domain(match))
         return list(data)
 
+    def rank_third_party_requests(self, amount=10):
+        '''Rank third-party domains based in crawl data (dascending)
+           Which domain receives the most amount of requests?'''
+        data = {}
+        site_requests = self._map_site_to_requests()
+        domains = self._get_requested_domains()
+        requests = [y[0] for x in site_requests.values() for y in x]
+        for domain in domains: # how many requests refer to domain?
+            matches = [req for req in requests if domain in req]
+            data[domain] = len(matches)
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
+
     def rank_third_party_prominence(self, amount=10):
         '''Ranks third-party domains based on suggested prominence metric
            Approach: A 1-million-site Measurement and Analysis'''
@@ -369,46 +382,50 @@ class DataEvaluator(object):
         sites_rank = self._map_site_to_rank()
         sites_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
-        for dom in domains:
-            # prominence: sum of all 1/rank(site) where domain is present
-            items = sites_requests.items()
-            ranks = [sites_rank[site] for site, req in items if self._is_domain_present(dom, req)]
-            data[dom] = reduce(lambda x, y: x + y, [1.0/x for x in ranks])
+        for site, requests in sites_requests.items():
+            reqdoms = set([self._get_domain(req[0]) for req in requests])
+            matches = [dom for dom in reqdoms if dom in domains]
+            for domain in matches:
+                # prominence: sum of all 1/rank(site) where domain is present
+                prominence = data.get(domain, 0)
+                data[domain] = prominence + 1.0/sites_rank[site]
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    def rank_third_party_domains(self, amount=10):
-        '''Rank third-party domains based in crawl data (dascending)
-           What domain (resource) is most requested? Based on prevalence'''
+    def rank_third_party_sites(self, amount=10):
+        '''Rank third-party domains based in crawl data (descending)
+           Which domain occures on the most distinct websites?'''
         data = {}
         site_requests = self._map_site_to_requests()
         domains = self._get_requested_domains()
-        items = site_requests.items()
-        for domain in domains:
-            # fetch sites which request domain
-            sites = [site for site, reqs in items if self._is_domain_present(domain, reqs)]
-            data[domain] = len(sites)
+        for _, requests in site_requests.items():
+            reqdoms = set([self._get_domain(req[0]) for req in requests])
+            matches = [dom for dom in reqdoms if dom in domains]
+            for domain in matches:
+                frequency = data.get(domain, 0)
+                data[domain] = frequency + 1
         return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
-    def rank_organisation_reach(self, disconnect_dict):
+    def rank_organisation_reach(self, disconnect_dict, amount=10):
         '''Ranks the reach of an organisation based on the disconnect blocking
-           list which contains organisations with their associated domains
+           list which contains organisations with their associated domains.
+           Which organisation is requested the most?
            Approach: Tracking the Trackers'''
         data = {}
         org_domains = self._map_org_to_domains(disconnect_dict)
         org_orgurl = self._map_org_to_orgurl(disconnect_dict)
-        domains = self._get_requested_domains()
+        reqdoms = self._get_requested_domains()
         site_requests = self._map_site_to_requests()
-        # filter only orgnames present in crawl
-        items = org_orgurl.items()
-        orgnames = [org for org, url in items if self._get_domain(url) in domains]
-        # check for any associated domains in requests
-        items = site_requests.items()
-        for orgname in orgnames:
-            amount = set()
-            for domain in org_domains[orgname]:
-                amount.update([site for site, reqs in items if self._is_domain_present(domain, reqs)])
-            data[orgname] = len(amount)
-        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:10]
+        # filter orgnames present in crawl to reduce overhead
+        _ = org_orgurl.items()
+        crawlorgs = [org for org, url in _ if self._get_domain(url) in reqdoms]
+        for requests in site_requests.values():
+            reqs = set([self._get_domain(tup[0]) for tup in requests])
+            for org in crawlorgs:
+                matches = [req for req in reqs if req in org_domains[org]]
+                if len(matches) > 0:
+                    frequency = data.get(org, 0)
+                    data[org] = frequency + 1
+        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
 
     def _get_blocked_domains(self, requests, blocklist):
         '''Matches requests against blocklist, returning matches'''
