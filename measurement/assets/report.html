@@ -13,10 +13,10 @@
     <!-- Meta Data (num_pages,num_timeouts,rate_timeouts,time)-->
     <table class="table table-bordered">
       <tr>
-        <th>sites</th>
+        <th># sites</th>
         <th>crawltype</th>
         <th>runtime</th>
-        <th>timeouts</th>
+        <th># timeouts</th>
         <th>timeoutrate</th>
       </tr>
       <tr>
@@ -34,36 +34,45 @@
 
     <!-- Storage (firstparty_cookies,thirdparty_cookies,flash_cookies,localstorage)-->
     <h4>Storage Technology</h4>
+    <!-- First Party cookies -->
     <table class="table table-bordered">
       <tr>
-        <th>first-party cookies</th>
-        <th>avg. fp cookies</th>
-        <th>third-party cookies</th>
-        <th>avg. tp cookies</th>
-        <th>flash</th>
-        <th>localstorage</th>
+        <th># first-party cookies</th>
+        <th>avg. per site</th>
+        <th>avg. lifetime</th>
       </tr>
       <tr>
         <td>{{first_cookies}}</td>
         <td>{{first_cookies_avg}}</td>
-        <td>{{third_cookies}}</td>
-        <td>{{third_cookies_avg}}</td>
-        <td>{{flash_cookies}}</td>
-        <td>{{localstorage}}</td>
+        <td>{{first_lifetime_avg}} days</td>
       </tr>
     </table>
-
-    <!-- Lifetime Average -->
+    <!-- Third Party Cookies -->
     <table class="table table-bordered">
       <tr>
-        <th>tracking cookies</th>
-        <th>avg. tracking cookies</th>
+        <th># third-party cookies</th>
+        <th>avg. per site</th>
         <th>avg. lifetime</th>
+      </tr>
+      <tr>
+        <td>{{third_cookies}}</td>
+        <td>{{third_cookies_avg}}</td>
+        <td>{{third_lifetime_avg}} days</td>
+      </tr>
+    </table>
+    <!-- Tracking Cookies and Other -->
+    <table class="table table-bordered">
+      <tr>
+        <th># tracking cookies</th>
+        <th>avg. per site</th>
+        <th># sites using flash</th>
+        <th># sites using localstorage</th>
       </tr>
       <tr>
         <td>{{tracking_cookies}}</td>
         <td>{{tracking_cookies_avg}}</td>
-        <td>{{lifetime_avg}} days</td>
+        <td>{{flash_cookies}}</td>
+        <td>{{localstorage}}</td>
       </tr>
     </table>
 
@@ -99,22 +108,31 @@
 
     <!-- Http (trackingcontext,loadingtime,cookiesync)-->
     <h4>Third-Party Http Traffic</h4>
+    <!-- Traffic Data -->
     <table class="table table-bordered">
       <tr>
-        <th>requests</th>
-        <th>avg. requests</th>
+        <th># requests</th>
+        <th>avg. per site</th>
         <th>avg. pageloadtime</th>
-        <th>avg. bytes</th>
-        <th>trackers</th>
-        <th>avg. trackers</th>
-        <th>unique blocked domains</th>
-        <th>cookie syncing</th>
+        <th>avg. received bytes</th>
       </tr>
       <tr>
         <td>{{count_requests}}</td>
         <td>{{avg_requests}}</td>
         <td>{{avg_pageload}}ms</td>
         <td>{{avg_resp_bytes}}</td>
+      </tr>
+    </table>
+
+    <!-- Tracking Behaviour -->
+    <table class="table table-bordered">
+      <tr>
+        <th># trackers</th>
+        <th>avg. per site</th>
+        <th># unique tracking domains</th>
+        <th># cookie syncing</th>
+      </tr>
+      <tr>
         <td>{{count_trackers}}</td>
         <td>{{avg_trackers}}</td>
         <td>{{count_unique}}</td>

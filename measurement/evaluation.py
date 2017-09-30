@@ -125,9 +125,14 @@ class DataEvaluator(object):
 
     def _eval_visited_sites(self):
         '''Evaluates how many sites have been visited, successfull
-        or unsuccessfull'''
+        and unsuccessfull'''
         self.cursor.execute(Queries.NUM_SITES_VISITED)
         return self.cursor.fetchone()[0]
+
+    def _eval_successful_sites(self):
+        '''Evaluates how many sites where visited sucessfully
+        (used for internal averaging)'''
+        return self._eval_visited_sites() - len(self._eval_failed_sites())
 
     #---------------------------------------------------------------------------
     # STORAGE ANALYSIS
@@ -167,7 +172,7 @@ class DataEvaluator(object):
                 data[top_domain] = amount + 1
         # summary of data
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
-        data['tracking_cookie_avg'] = data['total_sum'] / len(data.keys())
+        data['tracking_cookie_avg'] = data['total_sum'] / self._eval_successful_sites()
         return data
 
     def eval_localstorage_usage(self):
@@ -235,7 +240,7 @@ class DataEvaluator(object):
                 amount = data.get(top_domain, 0)
                 data[top_domain] = amount + 1
         data['total_sum'] = reduce(lambda x, y: x + y, data.values())
-        data['cookie_avg'] = data['total_sum'] / len(data.keys())
+        data['cookie_avg'] = data['total_sum'] / self._eval_successful_sites()
         return data
 
     #---------------------------------------------------------------------------
@@ -247,7 +252,7 @@ class DataEvaluator(object):
         sites_requests = self._map_site_to_requests()
         num_requests = [len(x) for x in sites_requests.values()]
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
-        data['request_avg'] = data['total_sum'] / len(sites_requests.keys())
+        data['request_avg'] = data['total_sum'] / self._eval_successful_sites()
         return data
 
     def eval_tracker_distribution(self, blocklist):
@@ -282,7 +287,7 @@ class DataEvaluator(object):
         # calc total sum, unique trackers and avg per site
         data["total_sum"] = reduce(lambda x, y: x + y, data.values())
         data["unique_trackers"] = list(uniquedoms)
-        data["tracker_avg"] = data["total_sum"] / len(sites_requests.keys())
+        data["tracker_avg"] = data["total_sum"] / self._eval_successful_sites()
         return data
 
     def eval_response_traffic(self):
@@ -298,7 +303,7 @@ class DataEvaluator(object):
                 data[site] = reduce(lambda x, y: int(x) + int(y), clengths)
         # calc total sum and average
         data['total_sum'] = reduce(lambda x, y: int(x) + int(y), data.values())
-        data['byte_avg'] = data['total_sum'] / len(sites_responses.keys())
+        data['byte_avg'] = data['total_sum'] / self._eval_successful_sites()
         # convert to kB
         data['total_sum'] = str(data['total_sum']/1000) + "kB"
         data['byte_avg'] = str(data['byte_avg']/1000) + "kB"
@@ -307,7 +312,7 @@ class DataEvaluator(object):
     def calc_pageload(self):
         '''Calculates pageload time (in milliseconds) according to timestamp between initial
         request to last response websites Note: Failed sites of the crawl are ignored'''
-        data, site_reqstamps, site_respstamps = {}, {}, {}
+        data, site_reqstamps, site_respstamps, total_sum = {}, {}, {}, 0
         failed = self._eval_failed_sites()
         # map request timestamps
         self.cursor.execute(Queries.REQUEST_TIMESTAMPS)
@@ -324,8 +329,8 @@ class DataEvaluator(object):
             min_req = min(site_reqstamps[site])
             max_resp = max(site_respstamps[site])
             data[site] = self._calc_request_timediff(min_req, max_resp)
-        avg = reduce(lambda x, y: x + y, data.values()) / len(data.keys())
-        data["loadtime_avg"] = avg
+            total_sum += data[site]
+        data["loadtime_avg"] = total_sum / self._eval_successful_sites()
         return data
 
     def detect_cookie_syncing(self):
@@ -577,15 +582,12 @@ class DataEvaluator(object):
 
     @staticmethod
     def _calc_request_timediff(req_timestmp, res_timestmp):
-        '''Calculates the time difference between to timestamps in ms'''
+        '''Calculates the time difference between to timestamps in milliseconds (ms)'''
         dates = []
-        stmp_format = '%Y-%m-%dT%H:%M:%S'
-        for ele in (req_timestmp, res_timestmp):
-            stmp, millisec = ele.split(".")
-            year, mon, day, hour, mint, sec, _, _, _ = time.strptime(stmp, stmp_format)
-            micro = int(millisec.strip("Z"))*1000
-            dates.append(datetime.datetime(year, mon, day, hour, mint, sec, micro))
-        delta = dates[1] - dates[0]
+        stmp_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+        req = datetime.datetime.strptime(req_timestmp, stmp_format)
+        resp = datetime.datetime.strptime(res_timestmp, stmp_format)
+        delta = resp - req
         return delta.seconds*1000 + delta.microseconds/1000
 
     #---------------------------------------------------------------------------
