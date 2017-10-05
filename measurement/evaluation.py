@@ -247,12 +247,15 @@ class DataEvaluator(object):
     # HTTP-TRAFFIC ANALYSIS
     #---------------------------------------------------------------------------
     def eval_requests(self):
-        '''Evaluates number of third-party request and average'''
+        '''Evaluates number of third-party request, average and amount domains'''
         data = {}
         sites_requests = self._map_site_to_requests()
         num_requests = [len(x) for x in sites_requests.values()]
+        domains = self._get_requested_domains()
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
         data['request_avg'] = data['total_sum'] / self._eval_successful_sites()
+        # how many third-parties in total?
+        data["domains_sum"] = len(domains)
         return data
 
     def eval_tracker_distribution(self, blocklist):
@@ -593,6 +596,7 @@ class DataEvaluator(object):
     #---------------------------------------------------------------------------
     # FINGERPRINTING ANALYSIS
     #---------------------------------------------------------------------------
+    #TODO: Should count total amount of employed scripts
     def eval_fingerprint_scripts(self, blacklist):
         '''Matches found js-scripts against blacklist'''
         data = {}
