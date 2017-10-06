@@ -251,11 +251,34 @@ class DataEvaluator(object):
         data = {}
         sites_requests = self._map_site_to_requests()
         num_requests = [len(x) for x in sites_requests.values()]
-        domains = self._get_requested_domains()
         data['total_sum'] = reduce(lambda x, y: x + y, num_requests)
         data['request_avg'] = data['total_sum'] / self._eval_successful_sites()
-        # how many third-parties in total?
-        data["domains_sum"] = len(domains)
+        return data
+
+    def eval_domains(self):
+        '''Evaluates number of third-party domains'''
+        data = {}
+        amount = self._eval_successful_sites()
+        domains = self._get_requested_domains()
+        site_requests = self._map_site_to_requests()
+        for requests in site_requests.values():
+            reqdoms = set([self._get_domain(req[0]) for req in requests])
+            matches = [dom for dom in reqdoms if dom in domains]
+            for domain in matches:
+                frequency = data.get(domain, 0)
+                data[domain] = frequency + 1
+        # how many present on more than one site?
+        frequent = [k for k, v in data.items() if v > 1]
+        # how many present on more than 1% of sites?
+        percentage = int(amount*0.01) if int(amount*0.01) > 0 else 1
+        percent = [k for k, v in data.items() if v > percentage]
+        # how many present on more than 10% of sites?
+        tenpercentage = int(amount*0.1) if int(amount*0.1) > 0 else 1
+        tenpercent = [k for k, v in data.items() if v > tenpercentage]
+        data["domains_larger_one"] = len(frequent)
+        data["domains_larger_percent"] = len(percent)
+        data["domains_larger_ten"] = tenpercent
+        data["total_sum"] = len(domains)
         return data
 
     def eval_tracker_distribution(self, blocklist):
@@ -411,7 +434,9 @@ class DataEvaluator(object):
             for domain in matches:
                 frequency = data.get(domain, 0)
                 data[domain] = frequency + 1
-        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
+        # calc percentage, put in perspective with failed sites
+        data = self._calc_rel_percentage(data)
+        return sorted(data.items(), key=lambda (k, v): v[0], reverse=True)[:amount]
 
     def rank_organisation_reach(self, disconnect_dict, amount=10):
         '''Ranks the reach of an organisation based on the disconnect blocking
@@ -433,7 +458,9 @@ class DataEvaluator(object):
                 if len(matches) > 0:
                     frequency = data.get(org, 0)
                     data[org] = frequency + 1
-        return sorted(data.items(), key=lambda (k, v): v, reverse=True)[:amount]
+        # calc percentage, put in perspective with failed sites
+        data = self._calc_rel_percentage(data)
+        return sorted(data.items(), key=lambda (k, v): v[0], reverse=True)[:amount]
 
     def _get_blocked_domains(self, requests, blocklist):
         '''Matches requests against blocklist, returning matches'''
@@ -444,6 +471,15 @@ class DataEvaluator(object):
         '''Flattens disconnect blocklist to domain list'''
         categorie_domains = self._map_category_to_domains(nestedlist)
         return [domain for l in categorie_domains.values() for domain in l]
+
+    def _calc_rel_percentage(self, domain_frequency):
+        '''Calculates percentage based on actual crawled sites for domain
+           frequency'''
+        data = {}
+        for domain, frequency in domain_frequency.items():
+            relpercent = float(frequency) / float(self._eval_successful_sites())
+            data[domain] = (frequency, relpercent)
+        return data
 
     def _prepare_detection_data(self):
         '''Prepares dict to check for stable user identifiers
@@ -586,7 +622,6 @@ class DataEvaluator(object):
     @staticmethod
     def _calc_request_timediff(req_timestmp, res_timestmp):
         '''Calculates the time difference between to timestamps in milliseconds (ms)'''
-        dates = []
         stmp_format = '%Y-%m-%dT%H:%M:%S.%fZ'
         req = datetime.datetime.strptime(req_timestmp, stmp_format)
         resp = datetime.datetime.strptime(res_timestmp, stmp_format)
@@ -596,7 +631,6 @@ class DataEvaluator(object):
     #---------------------------------------------------------------------------
     # FINGERPRINTING ANALYSIS
     #---------------------------------------------------------------------------
-    #TODO: Should count total amount of employed scripts
     def eval_fingerprint_scripts(self, blacklist):
         '''Matches found js-scripts against blacklist'''
         data = {}
