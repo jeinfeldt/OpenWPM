@@ -147,14 +147,6 @@ class DataEvaluator(object):
            third-party: cookies set outside of top level domain'''
         return self._eval_cookies(operator.ne)
 
-    def eval_flash_cookies(self):
-        '''Evaluates which sites make use of flash cookies'''
-        data = {}
-        self.cursor.execute(Queries.FLASH)
-        data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
-        data['total_sum'] = len(data['sites'])
-        return data
-
     def eval_tracking_cookies(self):
         '''Evaluates prevalence of tracking cookies based on crawl data.
            third-party: cookies set outside of top level domain
@@ -175,12 +167,22 @@ class DataEvaluator(object):
         data['tracking_cookie_avg'] = data['total_sum'] / self._eval_successful_sites()
         return data
 
+    def eval_flash_cookies(self):
+        '''Evaluates which sites make use of flash cookies'''
+        data = {}
+        self.cursor.execute(Queries.FLASH)
+        data['sites'] = [ele[0] for ele in self.cursor.fetchall()]
+        data['total_sum'] = len(data['sites'])
+        data['site_percentage'] = float(len(data['sites'])) / float(self._eval_successful_sites())
+        return data
+
     def eval_localstorage_usage(self):
         '''Evaluates the usage of localstorage across unique sites'''
         data = {}
         self.cursor.execute(Queries.LOCALSTORAGE)
         data['sites'] = [self._get_domain(x[0]) for x in self.cursor.fetchall()]
         data['total_sum'] = len(data['sites'])
+        data['site_percentage'] = float(len(data['sites'])) / float(self._eval_successful_sites())
         return data
 
     def rank_third_party_cookie_domains(self, amount=10):
@@ -374,7 +376,8 @@ class DataEvaluator(object):
             data[site] = list(set([self._get_domain(x) for x in matches]))
         # total amount of sites leaking cookie ids
         data['total_sum'] = len([x for x in data.values() if len(x) > 0])
-        return data
+        data['site_percentage'] = float(data['total_sum']) / float(self._eval_successful_sites())
+        return data['site_percentage']
 
     def detect_trackers(self, min_users=3):
         '''Detects possible user tracking keys based on http request logs per website.
@@ -430,8 +433,7 @@ class DataEvaluator(object):
         domains = self._get_requested_domains()
         for requests in site_requests.values():
             reqdoms = set([self._get_domain(req[0]) for req in requests])
-            matches = [dom for dom in reqdoms if dom in domains]
-            for domain in matches:
+            for domain in reqdoms:
                 frequency = data.get(domain, 0)
                 data[domain] = frequency + 1
         # calc percentage, put in perspective with failed sites
@@ -647,7 +649,8 @@ class DataEvaluator(object):
         unique_sites = set([site for l in data.values() for site in l])
         data["sites"] = list(unique_sites)
         data["total_sum"] = len(unique_sites)
-        return data
+        data["site_percentage"] = float(len(unique_sites)) / float(self._eval_successful_sites())
+        return (data["total_sum"], data["site_percentage"])
 
     def eval_fingerprint_distribution(self, blacklist):
         '''Evaluates the distribution of fingerprinting scripts based on the rank

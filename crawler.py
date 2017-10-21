@@ -6,7 +6,7 @@ import os
 from time import gmtime, strftime
 from automation import TaskManager, CommandSequence
 
-class DataCrawler(object):
+class BaseCrawler(object):
     '''High level class encapsulating crawling util functions'''
 
     # constants
@@ -24,7 +24,7 @@ class DataCrawler(object):
 
     def crawl(self, sites):
         '''Abstract method to be overwritten by subclasses'''
-        pass
+        raise NotImplementedError()
 
     def get_dbname(self):
         ''' Gets the generated output dbname '''
@@ -51,7 +51,7 @@ class DataCrawler(object):
         with open(file_path, 'r') as data:
             return json.load(data)
 
-class AnalysisCrawler(DataCrawler):
+class AnalysisCrawler(BaseCrawler):
     '''Crawler generating standard data (storage, http data, javascript)'''
 
     # constants
@@ -78,7 +78,7 @@ class AnalysisCrawler(DataCrawler):
             manager.execute_command_sequence(command_sequence, index=None)
         manager.close()
 
-class DetectionCrawler(DataCrawler):
+class DetectionCrawler(BaseCrawler):
     '''Crawler generating data for detection algorithm
        Approach: Unsupervised Detection of Web Trackers '''
 
@@ -106,7 +106,7 @@ class DetectionCrawler(DataCrawler):
                     manager.execute_command_sequence(command_sequence, index=None)
             manager.close()
 
-class LoginCrawler(DataCrawler):
+class LoginCrawler(BaseCrawler):
     '''Crawler enabling login behavior for certain sites. One can either crawl:
       statefull: login to certain site and crawl others
       stateless: crawl different login sites and log results'''

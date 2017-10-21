@@ -75,7 +75,7 @@ def evaluate(evaluation_dict):
         for tup in evalfuncs:
             name, func = tup
             if name == "trackingcontext" or name == "rank_org":
-                result = func(_load_json(BLOCKLIST))
+                result = func()
             elif name == "fingerprint_matches":
                 result = func(_load_json(FINGERPRINT_BLACKLIST))
             elif name == "detected_trackers":
@@ -91,7 +91,10 @@ def _main():
     evaluator = DataEvaluator(db_path)
     print "Starting analysis..."
     evaluation = _init_evaluation(evaluator)
-    data = evaluate(evaluation)
+    #data = evaluate(evaluation)
+    data = {}
+    data['localStorage'] = evaluator.eval_localstorage_usage()["site_percentage"]
+    data['flash'] = evaluator.eval_flash_cookies()["site_percentage"]
     if output is not None:
         print "Finished analysis, writing data to %s" %(output)
     else:
